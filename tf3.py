@@ -1,4 +1,4 @@
-python #!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 TinyFabulist - Evaluation toolkit for fable completion models
 A comprehensive evaluation framework for text generation models on moral fables.

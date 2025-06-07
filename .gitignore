@@ -1,0 +1,13 @@
+# Directories
+.venv/
+**/__pycache__/
+
+# Files
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+
+
+

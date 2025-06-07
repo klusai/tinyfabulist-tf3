@@ -1,0 +1,34 @@
+{
+  "experiments": {
+    "quick_demo_20250608_004715_95fbb5fa": {
+      "name": "quick_demo",
+      "description": "Quick demo of experiment tracking system",
+      "model": "gpt2",
+      "dataset": "klusai/ds-tf1-en-3m",
+      "start_time": "2025-06-08T00:47:15.505174",
+      "status": "completed",
+      "tags": [
+        "demo",
+        "test"
+      ],
+      "directory": "experiments/runs/quick_demo_20250608_004715_95fbb5fa",
+      "end_time": "2025-06-08T00:48:24.422648"
+    },
+    "quick_demo_20250608_005142_95fbb5fa": {
+      "name": "quick_demo",
+      "description": "Quick demo of experiment tracking system",
+      "model": "gpt2",
+      "dataset": "klusai/ds-tf1-en-3m",
+      "start_time": "2025-06-08T00:51:42.070490",
+      "status": "completed",
+      "tags": [
+        "demo",
+        "test"
+      ],
+      "directory": "experiments/runs/quick_demo_20250608_005142_95fbb5fa",
+      "end_time": "2025-06-08T00:52:43.419814"
+    }
+  },
+  "created": "2025-06-08T00:47:15.438201",
+  "last_updated": "2025-06-08T00:52:43.420752"
+}

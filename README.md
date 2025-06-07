@@ -1,126 +1,184 @@
-# GPT-2 Text Generation
+# TinyFabulist - Evaluation Framework for Fable Completion Models
 
-A comprehensive implementation for using the small GPT-2 model from Hugging Face.
-
-## Installation
-
-```bash
-pip install -r requirements.txt
-```
-
-## Usage
-
-### Quick Start (Interactive Mode)
-```bash
-python gpt2.py
-```
-
-### Command Line Options
-
-#### Basic Generation Example
-```bash
-python gpt2.py --mode basic
-```
-
-#### Pipeline Example
-```bash
-python gpt2.py --mode pipeline
-```
-
-#### Temperature Comparison
-```bash
-python gpt2.py --mode temperature
-```
-
-#### Minimal Test (Start Here if Having Issues)
-```bash
-python gpt2.py --mode minimal
-```
-
-#### Test Mode (Troubleshooting)
-```bash
-python gpt2.py --mode test
-```
-
-#### Single Text Generation
-```bash
-python gpt2.py --prompt "The future of AI is" --max-length 150 --temperature 0.8
-```
-
-#### Use Different Model Sizes
-```bash
-python gpt2.py --model gpt2-medium --prompt "Hello world"
-```
-
-### Available Models
-- `gpt2` - Small (124M parameters) - Default
-- `gpt2-medium` - Medium (355M parameters)
-- `gpt2-large` - Large (774M parameters)
-- `gpt2-xl` - Extra Large (1.5B parameters)
-
-### Parameters
-- `--mode`: Generation mode (basic, pipeline, interactive, temperature, all, test, minimal)
-- `--model`: GPT-2 model variant
-- `--prompt`: Text prompt for generation
-- `--max-length`: Maximum generation length (default: 100)
-- `--temperature`: Sampling temperature (default: 0.7)
-
-## Features
-
-- **Interactive Mode**: Chat-like interface for continuous text generation
-- **Multiple Examples**: Basic generation, pipeline usage, and temperature comparison
-- **Model Flexibility**: Support for all GPT-2 model sizes
-- **Configurable Parameters**: Control generation length, temperature, and other settings
-- **Error Handling**: Graceful handling of interruptions and errors
-- **📊 Experiment Tracking System**: Complete research framework for systematic experiment tracking and paper development
-- **🔬 Evaluation Framework**: Comprehensive evaluation suite with perplexity, BLEU, fluency, and narrative structure metrics
-- **🍎 Apple Silicon Optimization**: Native MPS support with intelligent device detection and CPU fallbacks
-
-## Example Usage in Code
-
-```python
-from gpt2 import GPT2Generator
-
-# Initialize generator
-generator = GPT2Generator()
-
-# Generate text
-result = generator.generate_text("Once upon a time", max_length=100)
-print(result[0])
-```
-
-## 🔬 Research & Experiment Framework
-
-This project includes a **production-ready research framework** for systematic experiment tracking, evaluation, and paper development with comprehensive Apple Silicon optimization.
-
-### Quick Start
-```bash
-# Run the evaluation framework
-python tinyfabulist.py comprehensive --model gpt2
-
-# Demo the complete experiment tracking system
-python demo_experiment_system.py
-```
+A comprehensive evaluation framework for systematic evaluation and comparison of text generation models on moral fable completion tasks, with complete research experiment tracking and Apple Silicon optimization.
 
 ## 🏗️ System Architecture
 
 ### Core Framework (`lib/`)
-- **`device_manager.py`**: Intelligent device detection and MPS optimization for Apple Silicon
+- **`device_manager.py`**: Intelligent device detection and MPS optimization for Apple Silicon (M1/M2/M3)
 - **`model_loader.py`**: Safe model loading with caching and cross-platform compatibility  
 - **`dataset_utils.py`**: Robust dataset loading with multiple fallback strategies
+- **`data_loading.py`**: Advanced data loading utilities with synthetic data generation
+- **`logging_utils.py`**: Comprehensive logging system with structured output
 
 ### Evaluation Framework (`evals/`)
-- **`base.py`**: Abstract base classes and shared utilities
-- **`perplexity.py`**: Language modeling quality metrics
+- **`base.py`**: Abstract base classes and shared evaluation utilities
+- **`perplexity.py`**: Language modeling quality metrics (perplexity, bits per character)
 - **`text_quality.py`**: BLEU, ROUGE, and BERTScore evaluation
 - **`fluency.py`**: Repetition, diversity, and coherence analysis
 - **`fable_structure.py`**: Narrative structure evaluation for fables
+- **`semantic_coherence.py`**: Advanced semantic coherence analysis
 - **`comprehensive.py`**: Combined evaluation with weighted scoring
 
 ### Experiment Tracking System (`experiments/`)
 - **`experiment_manager.py`**: Core experiment tracking with automatic metadata capture
 - **`run_experiments.py`**: Systematic experiment runner for different study types
 - **`analysis_tools.py`**: Analysis and visualization tools for results
+
+## 🚀 Quick Start
+
+### Installation
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd tf3
+
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### Basic Usage
+
+#### Quick Test (Start Here)
+```bash
+python tinyfabulist.py test
+```
+
+#### Comprehensive Evaluation
+```bash
+python tinyfabulist.py comprehensive --model gpt2 --num-samples 100
+```
+
+#### Single Evaluator
+```bash
+python tinyfabulist.py single --evaluator perplexity --model gpt2
+```
+
+#### Model Comparison
+```bash
+python tinyfabulist.py compare --models gpt2 gpt2-medium --num-samples 50
+```
+
+#### List Available Evaluators
+```bash
+python tinyfabulist.py list
+```
+
+## 📊 Evaluation Metrics
+
+### Language Modeling Quality
+- ✅ **Perplexity**: Standard and weighted perplexity calculation
+- ✅ **Bits per Character**: Information-theoretic quality measure
+- ✅ **Cross-entropy Loss**: Model confidence assessment
+
+### Text Quality
+- ✅ **BLEU Scores**: N-gram overlap metrics (BLEU-1 through BLEU-4)
+- ✅ **ROUGE Scores**: Recall-oriented quality measures
+- ✅ **BERTScore**: Semantic similarity using BERT embeddings
+
+### Fluency Analysis
+- ✅ **Repetition Detection**: Word and phrase repetition analysis
+- ✅ **Diversity Metrics**: Type-token ratios and n-gram diversity
+- ✅ **Coherence Scoring**: Sentence-level coherence analysis
+
+### Semantic Coherence
+- ✅ **Entity Consistency**: Character and setting consistency tracking
+- ✅ **Thematic Coherence**: Topic coherence analysis
+- ✅ **Logical Flow**: Discourse coherence evaluation
+
+### Narrative Structure (Fable-Specific)
+- ✅ **Story Elements**: Character, setting, moral detection
+- ✅ **Narrative Arc**: Beginning, middle, end structure analysis
+- ✅ **Moral Coherence**: Moral lesson consistency evaluation
+
+## 🔬 Research & Experiment Framework
+
+This project includes a **production-ready research framework** for systematic experiment tracking, evaluation, and paper development with comprehensive Apple Silicon optimization.
+
+### Demo the Complete System
+```bash
+python demo_experiment_system.py
+```
+
+### Systematic Experiments
+```bash
+cd experiments
+
+# Run baseline comparison between model variants
+python run_experiments.py --baseline
+
+# Conduct temperature parameter studies
+python run_experiments.py --temperature
+
+# Run all systematic studies
+python run_experiments.py --all
+
+# Quick demo experiment
+python run_experiments.py --demo
+```
+
+### Experiment Management
+```bash
+cd experiments
+
+# List all experiments
+python experiment_manager.py list
+
+# Compare experiments
+python experiment_manager.py compare exp1_id exp2_id
+
+# Export results to CSV
+python experiment_manager.py export exp1_id exp2_id --output results.csv
+
+# Generate analysis reports
+python analysis_tools.py summary exp1_id exp2_id
+python analysis_tools.py latex exp1_id exp2_id --output table.tex
+python analysis_tools.py report exp1_id exp2_id
+```
+
+## 📋 CLI Options & Parameters
+
+### Available Models
+- `gpt2` - Small (124M parameters) - Default
+- `gpt2-medium` - Medium (355M parameters)
+- `gpt2-large` - Large (774M parameters)
+- `gpt2-xl` - Extra Large (1.5B parameters)
+- Path to fine-tuned model (supports PEFT/LoRA adapters)
+
+### Key Parameters
+- `--model`: Model name or path to evaluate
+- `--dataset`: Dataset to evaluate on (default: klusai/ds-tf1-en-3m)
+- `--num-samples`: Number of samples to evaluate (default: 100)
+- `--max-length`: Maximum sequence length (default: 512)
+- `--temperature`: Generation temperature (default: 0.8)
+- `--device`: Device to use (auto-detects optimal device if not specified)
+- `--output-dir`: Directory to save results
+- `--evaluators`: Specific evaluators to run (for comprehensive mode)
+
+### Logging Options
+- `--log-level`: Set logging level (DEBUG, INFO, WARNING, ERROR)
+- `--log-file`: Save logs to file
+- `--hide-generated-text`: Don't show generated text samples in logs
+- `--quiet`: Reduce output verbosity
+
+## 🍎 Apple Silicon Optimization
+
+### Device Management
+- ✅ **Automatic MPS Detection**: Intelligent device selection (MPS > CUDA > CPU)
+- ✅ **Functionality Testing**: Pre-use MPS capability verification
+- ✅ **Environment Configuration**: Optimal MPS settings automatic setup
+- ✅ **Graceful Fallbacks**: CPU fallback when MPS operations fail
+
+### Performance Optimizations
+- ✅ **Model Caching**: Efficient model reuse across evaluations
+- ✅ **Memory Management**: Optimized tensor operations for Apple Silicon
+- ✅ **Safe Generation**: Robust text generation with MPS compatibility
+- ✅ **Error Handling**: Comprehensive fallback strategies
 
 ## 📊 Experiment Tracking Capabilities
 
@@ -143,97 +201,6 @@ python demo_experiment_system.py
 - ✅ **LaTeX Tables**: Publication-ready formatted tables
 - ✅ **Comprehensive Reports**: Statistical summaries and interpretations
 - ✅ **Result Comparison**: Multi-experiment analysis tools
-
-## 🔬 Evaluation Metrics
-
-### Language Modeling Quality
-- ✅ **Perplexity**: Standard and weighted perplexity calculation
-- ✅ **Bits per Character**: Information-theoretic quality measure
-- ✅ **Cross-entropy Loss**: Model confidence assessment
-
-### Text Quality
-- ✅ **BLEU Scores**: N-gram overlap metrics (BLEU-1 through BLEU-4)
-- ✅ **ROUGE Scores**: Recall-oriented quality measures
-- ✅ **BERTScore**: Semantic similarity using BERT embeddings
-
-### Fluency Analysis
-- ✅ **Repetition Detection**: Word and phrase repetition analysis
-- ✅ **Diversity Metrics**: Type-token ratios and n-gram diversity
-- ✅ **Coherence Scoring**: Sentence-level coherence analysis
-
-### Narrative Structure (Fable-Specific)
-- ✅ **Story Elements**: Character, setting, moral detection
-- ✅ **Narrative Arc**: Beginning, middle, end structure analysis
-- ✅ **Moral Coherence**: Moral lesson consistency evaluation
-
-## 🍎 Apple Silicon Optimization
-
-### Device Management
-- ✅ **Automatic MPS Detection**: Intelligent device selection (MPS > CUDA > CPU)
-- ✅ **Functionality Testing**: Pre-use MPS capability verification
-- ✅ **Environment Configuration**: Optimal MPS settings automatic setup
-- ✅ **Graceful Fallbacks**: CPU fallback when MPS operations fail
-
-### Performance Optimizations
-- ✅ **Model Caching**: Efficient model reuse across evaluations
-- ✅ **Memory Management**: Optimized tensor operations for Apple Silicon
-- ✅ **Safe Generation**: Robust text generation with MPS compatibility
-- ✅ **Error Handling**: Comprehensive fallback strategies
-
-## 📋 CLI Tools & Workflows
-
-### TinyFabulist CLI (`tinyfabulist.py`)
-```bash
-# Single evaluator runs
-python tinyfabulist.py single --evaluator perplexity --model gpt2
-
-# Comprehensive evaluation
-python tinyfabulist.py comprehensive --model gpt2 --num-samples 100
-
-# Model comparison
-python tinyfabulist.py compare --models gpt2 gpt2-medium
-
-# Quick testing
-python tinyfabulist.py test
-```
-
-### Experiment Management
-```bash
-cd experiments
-
-# Run systematic studies
-python run_experiments.py --baseline      # Model comparison
-python run_experiments.py --temperature   # Parameter study
-python run_experiments.py --all          # Complete study
-
-# Manage experiments
-python experiment_manager.py list
-python experiment_manager.py compare exp1_id exp2_id
-python experiment_manager.py export exp1_id exp2_id --output results.csv
-
-# Analysis tools
-python analysis_tools.py summary exp1_id exp2_id
-python analysis_tools.py latex exp1_id exp2_id --output table.tex
-python analysis_tools.py report exp1_id exp2_id
-```
-
-## 🧪 Demo & Testing
-
-### Comprehensive Demo
-```bash
-python demo_experiment_system.py
-```
-- ✅ **System Status Check**: Verifies all components working
-- ✅ **Live Experiment Run**: Demonstrates full tracking workflow
-- ✅ **Analysis Pipeline**: Shows result processing and export
-- ✅ **Paper-Ready Outputs**: Generates publication materials
-
-### Test Results (Apple Silicon M1)
-- ✅ **MPS Detection**: Successfully detects and uses Apple Silicon GPU
-- ✅ **Model Loading**: GPT-2 (124M parameters) loads on MPS device
-- ✅ **Evaluation Execution**: All metric categories function correctly
-- ✅ **Result Storage**: Complete metadata and results archived
-- ✅ **Export Generation**: CSV, LaTeX, and report outputs created
 
 ## 📈 Paper Development Workflow
 
@@ -275,7 +242,86 @@ python demo_experiment_system.py
 - ✅ **Scalability**: Supports both quick demos and large-scale studies
 - ✅ **Extensibility**: Easy addition of new metrics and experiment types
 
-## 🚀 Next Steps & Usage
+## 🚀 Advanced Usage Examples
+
+### Fine-tuned Model Evaluation
+```bash
+# Evaluate PEFT/LoRA adapter
+python tinyfabulist.py comprehensive --model ./path/to/peft-adapter
+
+# Compare fine-tuned vs base model
+python tinyfabulist.py compare --models gpt2 ./path/to/finetuned-model
+```
+
+### Custom Dataset Evaluation
+```bash
+# Use different dataset
+python tinyfabulist.py comprehensive --dataset your-dataset-name --split validation
+
+# Specify dataset parameters
+python tinyfabulist.py comprehensive --num-samples 200 --max-length 1024
+```
+
+### Research Experiment Workflow
+```bash
+# Complete research workflow
+cd experiments
+
+# 1. Run systematic studies
+python run_experiments.py --all
+
+# 2. List completed experiments  
+python experiment_manager.py list --status completed
+
+# 3. Generate comparison tables
+python analysis_tools.py latex exp1 exp2 exp3 --output comparison_table.tex
+
+# 4. Export all data
+python experiment_manager.py export exp1 exp2 exp3 --output final_results.csv
+```
+
+## 📚 Documentation
+
+- **`experiments/README.md`**: Complete experiment system documentation
+- **`lib/README.md`**: Core framework documentation
+- **`evals/README.md`**: Evaluation framework documentation
+- **Code Documentation**: Comprehensive docstrings throughout codebase
+- **Examples**: Working examples in demo scripts and CLI help
+
+## 🔧 Troubleshooting
+
+### Apple Silicon Issues
+If you encounter crashes or bus errors on Apple Silicon Macs:
+
+1. **Test with minimal configuration:**
+   ```bash
+   python tinyfabulist.py test
+   ```
+
+2. **Check MPS availability:**
+   ```bash
+   python -c "import torch; print('MPS available:', torch.backends.mps.is_available())"
+   ```
+
+3. **Force CPU usage if needed:**
+   ```bash
+   python tinyfabulist.py comprehensive --device cpu --num-samples 10
+   ```
+
+### Memory Issues
+- Use smaller models (`gpt2` instead of `gpt2-large`)
+- Reduce `--num-samples` and `--max-length` parameters
+- Close other applications to free up memory
+
+### Dataset Loading Issues
+The framework includes automatic fallback to synthetic data generation if dataset loading fails.
+
+### Common Issues
+- **Missing dependencies**: Run `pip install -r requirements.txt`
+- **Model loading errors**: Check available models with `python tinyfabulist.py list`
+- **CUDA/MPS errors**: The system automatically falls back to CPU if GPU fails
+
+## 🚀 Next Steps
 
 ### For Research Paper Development
 1. **Start with Demo**: Run `python demo_experiment_system.py` to verify setup
@@ -290,52 +336,8 @@ python demo_experiment_system.py
 - **Additional Models**: System supports any Hugging Face compatible model
 - **Dataset Integration**: Add new datasets through `lib/dataset_utils.py`
 
-## 📚 Documentation
-
-- **`experiments/README.md`**: Complete experiment system documentation
-- **Code Documentation**: Comprehensive docstrings throughout codebase
-- **Examples**: Working examples in demo scripts and CLI help
-
 ---
 
 **Status: ✅ FULLY IMPLEMENTED AND TESTED**
 
-The TinyFabulist project provides a complete, production-ready research framework for systematic evaluation and comparison of language models on fable completion tasks, with particular optimization for Apple Silicon hardware and comprehensive experiment tracking for academic paper development.
-
-## Troubleshooting
-
-### Bus Error / Crashes (Apple Silicon Macs)
-If you encounter a bus error or crashes (especially on Apple Silicon Macs):
-
-1. **Start with minimal test:**
-   ```bash
-   python gpt2.py --mode minimal
-   ```
-
-2. **If minimal test passes, try full test:**
-   ```bash
-   python gpt2.py --mode test
-   ```
-
-3. **The script includes these Apple Silicon fixes:**
-   - Forces CPU usage (no MPS/GPU)
-   - Manual token-by-token generation (avoids `model.generate()`)
-   - Environment variables to disable problematic PyTorch features
-   - Comprehensive error handling with fallbacks
-
-4. **If still having issues, try:**
-   ```bash
-   export PYTORCH_ENABLE_MPS_FALLBACK=1
-   export PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0
-   python gpt2.py --mode minimal
-   ```
-
-### Memory Issues
-- Use the small `gpt2` model instead of larger variants
-- Reduce `--max-length` parameter
-- Close other applications to free up memory
-
-### Common Issues
-- **"No module named 'torch'"**: Run `pip install -r requirements.txt`
-- **Warnings about attention mask**: These are handled automatically in the updated version
-- **Generation fails**: The script includes fallback mechanisms for robust operation 
+The TinyFabulist project provides a complete, production-ready research framework for systematic evaluation and comparison of language models on fable completion tasks, with particular optimization for Apple Silicon hardware and comprehensive experiment tracking for academic paper development. 

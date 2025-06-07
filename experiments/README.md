@@ -239,6 +239,6 @@ python experiment_manager.py export exp1_id exp2_id exp3_id --output raw_results
 ### Support
 - Check experiment logs in individual run directories
 - Use `--demo` flag for quick testing
-- Verify TinyFabulist framework is working with `python tinyfabulist.py test`
+- Verify TinyFabulist framework is working with `python tf3.py test`
 
 This system provides everything needed for systematic, reproducible research paper development with comprehensive experiment tracking and analysis capabilities. 

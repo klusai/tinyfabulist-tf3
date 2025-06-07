@@ -48,34 +48,34 @@ pip install -r requirements_eval.txt
 #### **1. Comprehensive Evaluation**
 ```bash
 # Full evaluation with all metrics
-python tinyfabulist.py comprehensive --model gpt2 --num-samples 100
+python tf3.py comprehensive --model gpt2 --num-samples 100
 
 # Specific evaluators only
-python tinyfabulist.py comprehensive --evaluators perplexity fluency --model gpt2
+python tf3.py comprehensive --evaluators perplexity fluency --model gpt2
 ```
 
 #### **2. Single Evaluator**
 ```bash
 # Run just perplexity evaluation
-python tinyfabulist.py single --evaluator perplexity --model gpt2
+python tf3.py single --evaluator perplexity --model gpt2
 
 # Run fable structure analysis
-python tinyfabulist.py single --evaluator fable_structure --model gpt2
+python tf3.py single --evaluator fable_structure --model gpt2
 ```
 
 #### **3. Model Comparison**
 ```bash
 # Compare multiple models
-python tinyfabulist.py compare --models gpt2 gpt2-medium --num-samples 50
+python tf3.py compare --models gpt2 gpt2-medium --num-samples 50
 
 # Compare fine-tuned vs base model
-python tinyfabulist.py compare --models gpt2 ./my-finetuned-gpt2
+python tf3.py compare --models gpt2 ./my-finetuned-gpt2
 ```
 
 #### **4. Quick Test**
 ```bash
 # Quick functionality test
-python tinyfabulist.py test --model gpt2
+python tf3.py test --model gpt2
 ```
 
 ### **Programmatic Usage**
@@ -138,7 +138,7 @@ result = evaluator.run(model, tokenizer, dataset)
 │   ├── fluency.py                 # Diversity and repetition metrics
 │   ├── fable_structure.py         # Fable-specific narrative metrics
 │   └── comprehensive.py           # Combined evaluation
-├── tinyfabulist.py                # Main CLI tool
+├── tf3.py                        # Main CLI tool
 ├── examples.py                    # Usage examples
 ├── requirements_eval.txt          # Dependencies
 └── EVALUATION_README.md           # This file
@@ -285,19 +285,19 @@ config = EvaluationConfig(
 ### **CLI Commands**
 ```bash
 # List available evaluators
-python tinyfabulist.py list
+python tf3.py list
 
 # Quick test
-python tinyfabulist.py test
+python tf3.py test
 
 # Single evaluator
-python tinyfabulist.py single --evaluator EVALUATOR --model MODEL
+python tf3.py single --evaluator EVALUATOR --model MODEL
 
 # Comprehensive evaluation  
-python tinyfabulist.py comprehensive --model MODEL [OPTIONS]
+python tf3.py comprehensive --model MODEL [OPTIONS]
 
 # Model comparison
-python tinyfabulist.py compare --models MODEL1 MODEL2 [OPTIONS]
+python tf3.py compare --models MODEL1 MODEL2 [OPTIONS]
 ```
 
 ### **Common Options**

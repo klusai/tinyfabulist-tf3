@@ -52,7 +52,7 @@ Let's start!
     
     # Step 1: Check system status
     print("\n📋 STEP 1: System Status Check")
-    if not run_command("python ../tinyfabulist.py test", "Testing TinyFabulist framework"):
+    if not run_command("python ../tf3.py test", "Testing TinyFabulist framework"):
         print("⚠️  TinyFabulist framework test failed, but continuing with demo...")
     
     # Step 2: Run demo experiment

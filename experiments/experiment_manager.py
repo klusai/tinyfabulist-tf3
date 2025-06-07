@@ -326,7 +326,7 @@ class ExperimentRunner:
         
         try:
             # Import here to avoid circular imports
-            from tinyfabulist import load_model_and_tokenizer, load_dataset_with_fallback
+            from tf3 import load_model_and_tokenizer, load_dataset_with_fallback
             from evals import get_evaluator, ComprehensiveEvaluator
             
             print(f"🤖 Loading model: {config.model_name}")

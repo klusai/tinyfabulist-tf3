@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+python #!/usr/bin/env python3
 """
 TinyFabulist - Evaluation toolkit for fable completion models
 A comprehensive evaluation framework for text generation models on moral fables.
@@ -333,16 +333,16 @@ def main():
         epilog="""
 Examples:
   # Run comprehensive evaluation
-  python tinyfabulist.py comprehensive --model gpt2 --num-samples 100
+  python tf3.py comprehensive --model gpt2 --num-samples 100
 
   # Run single evaluator
-  python tinyfabulist.py single --evaluator perplexity --model gpt2
+  python tf3.py single --evaluator perplexity --model gpt2
 
   # Compare multiple models
-  python tinyfabulist.py compare --models gpt2 gpt2-medium --num-samples 50
+  python tf3.py compare --models gpt2 gpt2-medium --num-samples 50
 
   # Use fine-tuned model
-  python tinyfabulist.py comprehensive --model ./my-finetuned-gpt2
+  python tf3.py comprehensive --model ./my-finetuned-gpt2
 
 Available evaluators: perplexity, text_quality, fluency, fable_structure, comprehensive
         """

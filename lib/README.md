@@ -129,10 +129,10 @@ The library integrates seamlessly with the evaluation framework:
 
 ```bash
 # Uses automatic MPS detection
-python tinyfabulist.py comprehensive --model gpt2
+python tf3.py comprehensive --model gpt2
 
 # Explicit device specification
-python tinyfabulist.py comprehensive --model gpt2 --device mps
+python tf3.py comprehensive --model gpt2 --device mps
 
 # Test functionality
 python test_lib.py

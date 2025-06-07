@@ -46,27 +46,27 @@ pip install -r requirements.txt
 
 #### Quick Test (Start Here)
 ```bash
-python tinyfabulist.py test
+python tf3.py test
 ```
 
 #### Comprehensive Evaluation
 ```bash
-python tinyfabulist.py comprehensive --model gpt2 --num-samples 100
+python tf3.py comprehensive --model gpt2 --num-samples 100
 ```
 
 #### Single Evaluator
 ```bash
-python tinyfabulist.py single --evaluator perplexity --model gpt2
+python tf3.py single --evaluator perplexity --model gpt2
 ```
 
 #### Model Comparison
 ```bash
-python tinyfabulist.py compare --models gpt2 gpt2-medium --num-samples 50
+python tf3.py compare --models gpt2 gpt2-medium --num-samples 50
 ```
 
 #### List Available Evaluators
 ```bash
-python tinyfabulist.py list
+python tf3.py list
 ```
 
 ## 📊 Evaluation Metrics
@@ -247,19 +247,19 @@ python analysis_tools.py report exp1_id exp2_id
 ### Fine-tuned Model Evaluation
 ```bash
 # Evaluate PEFT/LoRA adapter
-python tinyfabulist.py comprehensive --model ./path/to/peft-adapter
+python tf3.py comprehensive --model ./path/to/peft-adapter
 
 # Compare fine-tuned vs base model
-python tinyfabulist.py compare --models gpt2 ./path/to/finetuned-model
+python tf3.py compare --models gpt2 ./path/to/finetuned-model
 ```
 
 ### Custom Dataset Evaluation
 ```bash
 # Use different dataset
-python tinyfabulist.py comprehensive --dataset your-dataset-name --split validation
+python tf3.py comprehensive --dataset your-dataset-name --split validation
 
 # Specify dataset parameters
-python tinyfabulist.py comprehensive --num-samples 200 --max-length 1024
+python tf3.py comprehensive --num-samples 200 --max-length 1024
 ```
 
 ### Research Experiment Workflow
@@ -295,7 +295,7 @@ If you encounter crashes or bus errors on Apple Silicon Macs:
 
 1. **Test with minimal configuration:**
    ```bash
-   python tinyfabulist.py test
+   python tf3.py test
    ```
 
 2. **Check MPS availability:**
@@ -305,7 +305,7 @@ If you encounter crashes or bus errors on Apple Silicon Macs:
 
 3. **Force CPU usage if needed:**
    ```bash
-   python tinyfabulist.py comprehensive --device cpu --num-samples 10
+   python tf3.py comprehensive --device cpu --num-samples 10
    ```
 
 ### Memory Issues
@@ -318,7 +318,7 @@ The framework includes automatic fallback to synthetic data generation if datase
 
 ### Common Issues
 - **Missing dependencies**: Run `pip install -r requirements.txt`
-- **Model loading errors**: Check available models with `python tinyfabulist.py list`
+- **Model loading errors**: Check available models with `python tf3.py list`
 - **CUDA/MPS errors**: The system automatically falls back to CPU if GPU fails
 
 ## 🚀 Next Steps

@@ -22,10 +22,14 @@ class TextQualityEvaluator(BaseEvaluator):
         if not self._nltk_downloaded:
             try:
                 import nltk
+                # Download both punkt_tab (NLTK 3.9+) and punkt (legacy support)
+                nltk.download('punkt_tab', quiet=True)
                 nltk.download('punkt', quiet=True)
                 self._nltk_downloaded = True
             except ImportError:
                 self._log("Warning: NLTK not available, using basic tokenization")
+            except Exception as e:
+                self._log(f"Warning: NLTK data download failed: {e}, using basic tokenization")
     
     def _ensure_rouge(self):
         """Ensure ROUGE scorer is initialized"""
@@ -55,8 +59,10 @@ class TextQualityEvaluator(BaseEvaluator):
         try:
             from nltk.tokenize import word_tokenize
             return word_tokenize(text.lower())
-        except ImportError:
-            # Fallback tokenization
+        except (ImportError, LookupError) as e:
+            # Fallback tokenization for import errors or missing NLTK data
+            if isinstance(e, LookupError):
+                self._log(f"NLTK data missing ({e}), using fallback tokenization")
             return re.findall(r'\b\w+\b', text.lower())
     
     def calculate_bleu_score(self, reference: str, generated: str) -> Dict[str, float]:

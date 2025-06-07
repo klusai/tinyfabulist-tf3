@@ -1,4 +1,7 @@
-# TinyFabulist Paper Series: TF3 - Evaluation and Fine-tuning Framework based on GPT-2 for Fable Completion Models
+# TinyFabulist Paper Series: TF3
+## Evaluation and Fine-tuning Framework based on GPT-2 for Fable Completion Models
+
+---
 
 A comprehensive evaluation framework for systematic evaluation and comparison of text generation models on moral fable completion tasks, with complete research experiment tracking and Apple Silicon optimization.
 

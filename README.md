@@ -32,7 +32,7 @@ A comprehensive evaluation framework for systematic evaluation and comparison of
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/klusai/tinyfabulist-tf3
 cd tf3
 
 # Create virtual environment

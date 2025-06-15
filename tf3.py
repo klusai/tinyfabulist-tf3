@@ -141,6 +141,28 @@ def create_config_from_args(args) -> EvaluationConfig:
         'verbose': not args.quiet
     }
     
+    # Add standardized evaluation parameters if available
+    if hasattr(args, 'max_prompt_tokens') and args.max_prompt_tokens is not None:
+        config_kwargs['max_prompt_tokens'] = args.max_prompt_tokens
+    
+    if hasattr(args, 'max_new_tokens') and args.max_new_tokens is not None:
+        config_kwargs['max_new_tokens'] = args.max_new_tokens
+    
+    if hasattr(args, 'prompt_split_ratio') and args.prompt_split_ratio is not None:
+        config_kwargs['prompt_split_ratio'] = args.prompt_split_ratio
+    
+    if hasattr(args, 'num_runs') and args.num_runs is not None:
+        config_kwargs['num_evaluation_runs'] = args.num_runs
+    
+    if hasattr(args, 'confidence_level') and args.confidence_level is not None:
+        config_kwargs['confidence_level'] = args.confidence_level
+    
+    if hasattr(args, 'length_normalize') and args.length_normalize is not None:
+        config_kwargs['length_normalize_metrics'] = args.length_normalize
+    
+    if hasattr(args, 'truncation_strategy') and args.truncation_strategy is not None:
+        config_kwargs['prompt_truncation_strategy'] = args.truncation_strategy
+    
     # Only set device if explicitly specified, otherwise let default_factory handle it
     if args.device is not None:
         config_kwargs['device'] = args.device
@@ -222,30 +244,68 @@ def run_comprehensive_evaluation(args):
     if args.evaluators:
         evaluator.set_enabled_evaluators(args.evaluators)
     
-    # Run evaluation
-    print("Running comprehensive evaluation...")
-    result = evaluator.run(model, tokenizer, dataset)
-    
-    # Save results
-    if args.output_dir:
-        os.makedirs(args.output_dir, exist_ok=True)
+    # Check if statistical evaluation is requested
+    if config.num_evaluation_runs > 1:
+        print(f"Running statistical evaluation with {config.num_evaluation_runs} runs...")
         
-        # Save main results
-        output_file = os.path.join(args.output_dir, "comprehensive_results.json")
-        result.save_json(output_file)
+        # Run statistical evaluation
+        statistical_results = evaluator.run_statistical_evaluation(model, tokenizer, dataset)
         
-        # Save summary report
-        report_file = os.path.join(args.output_dir, "evaluation_report.txt")
-        with open(report_file, 'w') as f:
-            f.write(result.metadata["summary_report"])
+        # Save results
+        if args.output_dir:
+            os.makedirs(args.output_dir, exist_ok=True)
+            
+            # Save statistical summary
+            stats_file = os.path.join(args.output_dir, "statistical_results.json")
+            with open(stats_file, 'w') as f:
+                json.dump({
+                    'statistical_summary': statistical_results['statistical_summary'],
+                    'methodology': statistical_results['methodology']
+                }, f, indent=2, default=str)
+            
+            # Save detailed report
+            report_file = os.path.join(args.output_dir, "statistical_report.txt")
+            with open(report_file, 'w') as f:
+                f.write(statistical_results['report'])
+            
+            # Save individual run results
+            for i, result in enumerate(statistical_results['all_results']):
+                run_file = os.path.join(args.output_dir, f"run_{i+1}_results.json")
+                result.save_json(run_file)
+            
+            print(f"Statistical results saved to: {stats_file}")
+            print(f"Statistical report saved to: {report_file}")
         
-        print(f"Results saved to: {output_file}")
-        print(f"Report saved to: {report_file}")
+        # Print statistical report
+        print("\n" + statistical_results['report'])
+        
+        return statistical_results
     
-    # Print summary report
-    print("\n" + result.metadata["summary_report"])
-    
-    return result
+    else:
+        # Single run evaluation
+        print("Running comprehensive evaluation...")
+        result = evaluator.run(model, tokenizer, dataset)
+        
+        # Save results
+        if args.output_dir:
+            os.makedirs(args.output_dir, exist_ok=True)
+            
+            # Save main results
+            output_file = os.path.join(args.output_dir, "comprehensive_results.json")
+            result.save_json(output_file)
+            
+            # Save summary report
+            report_file = os.path.join(args.output_dir, "evaluation_report.txt")
+            with open(report_file, 'w') as f:
+                f.write(result.metadata["summary_report"])
+            
+            print(f"Results saved to: {output_file}")
+            print(f"Report saved to: {report_file}")
+        
+        # Print summary report
+        print("\n" + result.metadata["summary_report"])
+        
+        return result
 
 
 def compare_models(args):
@@ -352,6 +412,22 @@ Available evaluators: perplexity, text_quality, fluency, fable_structure, compre
                           help="Save generated text in results")
         parser.add_argument("--quiet", action="store_true",
                           help="Reduce output verbosity")
+        
+        # Standardized evaluation arguments
+        parser.add_argument("--max-prompt-tokens", type=int, default=256,
+                          help="Maximum tokens in prompt (default: 256)")
+        parser.add_argument("--max-new-tokens", type=int, default=256,
+                          help="Maximum new tokens to generate (default: 256)")
+        parser.add_argument("--prompt-split-ratio", type=float, default=0.6,
+                          help="Ratio of text to use as prompt vs reference (default: 0.6)")
+        parser.add_argument("--truncation-strategy", choices=["left", "right", "middle"], default="right",
+                          help="How to truncate long prompts (default: right)")
+        parser.add_argument("--num-runs", type=int, default=1,
+                          help="Number of evaluation runs for statistical analysis (default: 1)")
+        parser.add_argument("--confidence-level", type=float, default=0.95,
+                          help="Confidence level for statistical analysis (default: 0.95)")
+        parser.add_argument("--length-normalize", action="store_true",
+                          help="Include length-normalized metrics")
         
         # Logging arguments
         parser.add_argument("--log-level", default="INFO", 

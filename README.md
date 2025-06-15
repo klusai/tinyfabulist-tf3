@@ -1,7 +1,7 @@
 # TinyFabulist Paper Series: TF3
 ## Evaluation and Fine-tuning Framework based on GPT-2 for Fable Completion Models
 
-A comprehensive evaluation framework for systematic evaluation and comparison of text generation models on moral fable completion tasks, with complete research experiment tracking and Apple Silicon optimization.
+A comprehensive evaluation framework for systematic evaluation and comparison of text generation models on moral fable completion tasks, with standardized evaluation protocols, statistical analysis, and Apple Silicon optimization.
 
 ## 🏗️ System Architecture
 
@@ -13,13 +13,13 @@ A comprehensive evaluation framework for systematic evaluation and comparison of
 - **`logging_utils.py`**: Comprehensive logging system with structured output
 
 ### Evaluation Framework (`evals/`)
-- **`base.py`**: Abstract base classes and shared evaluation utilities
+- **`base.py`**: Abstract base classes with standardized evaluation protocols and statistical analysis
 - **`perplexity.py`**: Language modeling quality metrics (perplexity, bits per character)
-- **`text_quality.py`**: BLEU, ROUGE, and BERTScore evaluation
-- **`fluency.py`**: Repetition, diversity, and coherence analysis
-- **`fable_structure.py`**: Narrative structure evaluation for fables
-- **`semantic_coherence.py`**: Advanced semantic coherence analysis
-- **`comprehensive.py`**: Combined evaluation with weighted scoring
+- **`text_quality.py`**: BLEU, ROUGE, and BERTScore evaluation with third-party library integration
+- **`fluency.py`**: Repetition, diversity, and coherence analysis using NLTK
+- **`fable_structure.py`**: Narrative structure evaluation for fables using transformer models
+- **`semantic_coherence.py`**: Advanced semantic coherence analysis with scikit-learn integration
+- **`comprehensive.py`**: Combined evaluation with weighted scoring and statistical reporting
 
 ### Experiment Tracking System (`experiments/`)
 - **`experiment_manager.py`**: Core experiment tracking with automatic metadata capture
@@ -50,9 +50,16 @@ pip install -r requirements.txt
 python tf3.py test
 ```
 
-#### Comprehensive Evaluation
+#### Comprehensive Evaluation with Standardized Settings
 ```bash
-python tf3.py comprehensive --model gpt2 --num-samples 100
+python tf3.py comprehensive --model gpt2 --num-samples 100 \
+  --max-prompt-tokens 256 --max-new-tokens 256
+```
+
+#### Statistical Evaluation with Multiple Runs
+```bash
+python tf3.py comprehensive --model gpt2 --num-samples 50 \
+  --num-runs 3 --confidence-level 0.95 --length-normalize
 ```
 
 #### Single Evaluator
@@ -60,9 +67,10 @@ python tf3.py comprehensive --model gpt2 --num-samples 100
 python tf3.py single --evaluator perplexity --model gpt2
 ```
 
-#### Model Comparison
+#### Model Comparison with Standardized Protocols
 ```bash
-python tf3.py compare --models gpt2 gpt2-medium --num-samples 50
+python tf3.py compare --models gpt2 gpt2-medium --num-samples 50 \
+  --max-prompt-tokens 256 --prompt-split-ratio 0.6
 ```
 
 #### List Available Evaluators
@@ -77,70 +85,46 @@ python tf3.py list
 - ✅ **Bits per Character**: Information-theoretic quality measure
 - ✅ **Cross-entropy Loss**: Model confidence assessment
 
-### Text Quality
-- ✅ **BLEU Scores**: N-gram overlap metrics (BLEU-1 through BLEU-4)
-- ✅ **ROUGE Scores**: Recall-oriented quality measures
-- ✅ **BERTScore**: Semantic similarity using BERT embeddings
+### Text Quality (Third-party Library Integration)
+- ✅ **BLEU Scores**: N-gram overlap metrics using `evaluate` library
+- ✅ **ROUGE Scores**: Recall-oriented quality measures using `evaluate` library
+- ✅ **BERTScore**: Semantic similarity using `evaluate` library with BERT embeddings
 
-### Fluency Analysis
+### Fluency Analysis (NLTK Integration)
 - ✅ **Repetition Detection**: Word and phrase repetition analysis
-- ✅ **Diversity Metrics**: Type-token ratios and n-gram diversity
+- ✅ **Diversity Metrics**: Type-token ratios and n-gram diversity using NLTK
 - ✅ **Coherence Scoring**: Sentence-level coherence analysis
+- ✅ **Grammar Checking**: Optional LanguageTool integration (requires Java)
 
-### Semantic Coherence
-- ✅ **Entity Consistency**: Character and setting consistency tracking
-- ✅ **Thematic Coherence**: Topic coherence analysis
-- ✅ **Logical Flow**: Discourse coherence evaluation
+### Semantic Coherence (Scikit-learn Integration)
+- ✅ **Topic Consistency**: Cosine similarity using scikit-learn
+- ✅ **Content Appropriateness**: Zero-shot classification using transformers
+- ✅ **Fable Relevance**: Domain-specific relevance scoring
+- ✅ **Embedding Analysis**: Advanced semantic analysis
 
-### Narrative Structure (Fable-Specific)
-- ✅ **Story Elements**: Character, setting, moral detection
+### Narrative Structure (Transformer-based)
+- ✅ **Story Elements**: Character, setting, moral detection using BART-large-MNLI
 - ✅ **Narrative Arc**: Beginning, middle, end structure analysis
 - ✅ **Moral Coherence**: Moral lesson consistency evaluation
 
-## 🔬 Research & Experiment Framework
+## 🔬 Standardized Evaluation Protocols
 
-This project includes a **production-ready research framework** for systematic experiment tracking, evaluation, and paper development with comprehensive Apple Silicon optimization.
+### Token-based Prompt Control
+- ✅ **Fixed Token Limits**: Consistent prompt lengths across evaluations
+- ✅ **Configurable Split Ratios**: Precise control over prompt vs reference text
+- ✅ **Multiple Truncation Strategies**: Left, right, or middle truncation
+- ✅ **Minimum Length Validation**: Ensures viable prompts and references
 
-### Demo the Complete System
-```bash
-python demo_experiment_system.py
-```
+### Statistical Rigor
+- ✅ **Multiple Evaluation Runs**: Statistical significance testing
+- ✅ **Confidence Intervals**: 95% confidence intervals by default
+- ✅ **Reproducible Seeds**: Fixed random seeds for each run
+- ✅ **Coefficient of Variation**: Measurement consistency analysis
 
-### Systematic Experiments
-```bash
-cd experiments
-
-# Run baseline comparison between model variants
-python run_experiments.py --baseline
-
-# Conduct temperature parameter studies
-python run_experiments.py --temperature
-
-# Run all systematic studies
-python run_experiments.py --all
-
-# Quick demo experiment
-python run_experiments.py --demo
-```
-
-### Experiment Management
-```bash
-cd experiments
-
-# List all experiments
-python experiment_manager.py list
-
-# Compare experiments
-python experiment_manager.py compare exp1_id exp2_id
-
-# Export results to CSV
-python experiment_manager.py export exp1_id exp2_id --output results.csv
-
-# Generate analysis reports
-python analysis_tools.py summary exp1_id exp2_id
-python analysis_tools.py latex exp1_id exp2_id --output table.tex
-python analysis_tools.py report exp1_id exp2_id
-```
+### Length Normalization
+- ✅ **Length-aware Metrics**: Fair comparison across different generation lengths
+- ✅ **Generation Statistics**: Detailed length analysis and reporting
+- ✅ **Variance Analysis**: Length consistency measurement
 
 ## 📋 CLI Options & Parameters
 
@@ -151,7 +135,7 @@ python analysis_tools.py report exp1_id exp2_id
 - `gpt2-xl` - Extra Large (1.5B parameters)
 - Path to fine-tuned model (supports PEFT/LoRA adapters)
 
-### Key Parameters
+### Core Parameters
 - `--model`: Model name or path to evaluate
 - `--dataset`: Dataset to evaluate on (default: klusai/ds-tf1-en-3m)
 - `--num-samples`: Number of samples to evaluate (default: 100)
@@ -160,6 +144,15 @@ python analysis_tools.py report exp1_id exp2_id
 - `--device`: Device to use (auto-detects optimal device if not specified)
 - `--output-dir`: Directory to save results
 - `--evaluators`: Specific evaluators to run (for comprehensive mode)
+
+### Standardized Evaluation Parameters
+- `--max-prompt-tokens`: Maximum tokens in prompt (default: 256)
+- `--max-new-tokens`: Maximum new tokens to generate (default: 256)
+- `--prompt-split-ratio`: Ratio of text to use as prompt vs reference (default: 0.6)
+- `--truncation-strategy`: How to truncate long prompts (left/right/middle, default: right)
+- `--num-runs`: Number of evaluation runs for statistical analysis (default: 1)
+- `--confidence-level`: Confidence level for statistical analysis (default: 0.95)
+- `--length-normalize`: Include length-normalized metrics
 
 ### Logging Options
 - `--log-level`: Set logging level (DEBUG, INFO, WARNING, ERROR)
@@ -181,113 +174,92 @@ python analysis_tools.py report exp1_id exp2_id
 - ✅ **Safe Generation**: Robust text generation with MPS compatibility
 - ✅ **Error Handling**: Comprehensive fallback strategies
 
-## 📊 Experiment Tracking Capabilities
+## 📊 Statistical Analysis Features
 
-### Automatic Tracking
-- ✅ **Unique Experiment IDs**: Hash-based IDs with timestamps
-- ✅ **Environment Capture**: Hardware, PyTorch version, git state
-- ✅ **Configuration Storage**: Complete hyperparameter recording
-- ✅ **Result Archival**: JSON format with detailed metrics
-- ✅ **Status Management**: Running/completed/failed experiment states
+### Multiple Run Analysis
+```bash
+# Run 3 evaluations with different seeds for statistical significance
+python tf3.py comprehensive --model gpt2 --num-runs 3 --confidence-level 0.95
+```
 
-### Study Types Implemented
-- ✅ **Baseline Comparison**: GPT-2 model variants (small, medium, large)
-- ✅ **Temperature Studies**: Parameter sensitivity analysis (0.3-1.2)
-- ✅ **Sample Size Analysis**: Convergence studies (10, 25, 50, 100 samples)
-- ✅ **Evaluator Comparison**: Individual metric performance analysis
-- ✅ **Fine-tuned Model Evaluation**: Framework for custom model comparison
+### Comprehensive Statistical Reporting
+- ✅ **Mean and Standard Deviation**: Central tendency and variability
+- ✅ **Confidence Intervals**: Statistical significance assessment
+- ✅ **Min/Max Values**: Range analysis across runs
+- ✅ **Individual Run Tracking**: Complete transparency of results
+- ✅ **Execution Time Analysis**: Performance consistency measurement
 
-### Analysis & Export
-- ✅ **Summary Tables**: CSV export for spreadsheet analysis
-- ✅ **LaTeX Tables**: Publication-ready formatted tables
-- ✅ **Comprehensive Reports**: Statistical summaries and interpretations
-- ✅ **Result Comparison**: Multi-experiment analysis tools
-
-## 📈 Paper Development Workflow
-
-### 1. Systematic Experiments
-- Run baseline comparisons between model variants
-- Conduct parameter sensitivity studies
-- Evaluate fine-tuned models against baselines
-- Generate reproducible results with complete metadata
-
-### 2. Result Analysis
-- Compare performance across experiments
-- Generate statistical summaries
-- Create publication-ready tables and figures
-- Perform significance testing
-
-### 3. Paper Integration
-- **Methodology Section**: Complete environment and configuration details
-- **Results Section**: Automated table generation with LaTeX formatting
-- **Reproducibility**: Git commit tracking and environment capture
-- **Supplementary Material**: Raw data export for transparency
-
-## 🎯 Production Readiness
-
-### Code Quality
-- ✅ **Modular Design**: Clean separation of concerns across components
-- ✅ **Error Handling**: Comprehensive exception handling and fallbacks
-- ✅ **Documentation**: Extensive docstrings and README files
-- ✅ **Type Hints**: Full type annotation for better code maintainability
-
-### Cross-Platform Compatibility
-- ✅ **Apple Silicon (MPS)**: Native support with optimizations
-- ✅ **CUDA**: GPU acceleration on NVIDIA hardware
-- ✅ **CPU**: Universal fallback for any system
-- ✅ **Memory Management**: Efficient usage across different hardware
-
-### Research Workflow Integration
-- ✅ **Version Control**: Git integration for code versioning
-- ✅ **Reproducibility**: Complete state capture for experiment replication
-- ✅ **Scalability**: Supports both quick demos and large-scale studies
-- ✅ **Extensibility**: Easy addition of new metrics and experiment types
+### Methodology Documentation
+- ✅ **Complete Parameter Recording**: All evaluation settings documented
+- ✅ **Seed Tracking**: Reproducibility information
+- ✅ **Environment Capture**: Hardware and software configuration
+- ✅ **Statistical Methodology**: Clear reporting of analysis methods
 
 ## 🚀 Advanced Usage Examples
 
+### Standardized Research Evaluation
+```bash
+# Research-grade evaluation with statistical analysis
+python tf3.py comprehensive --model gpt2 \
+  --num-samples 100 \
+  --max-prompt-tokens 256 \
+  --max-new-tokens 256 \
+  --prompt-split-ratio 0.6 \
+  --num-runs 5 \
+  --confidence-level 0.95 \
+  --length-normalize \
+  --output-dir results/
+```
+
+### Model Comparison with Statistical Rigor
+```bash
+# Compare models with standardized protocols
+python tf3.py compare \
+  --models gpt2 gpt2-medium \
+  --num-samples 50 \
+  --max-prompt-tokens 256 \
+  --num-runs 3 \
+  --truncation-strategy right \
+  --output-dir comparison/
+```
+
 ### Fine-tuned Model Evaluation
 ```bash
-# Evaluate PEFT/LoRA adapter
-python tf3.py comprehensive --model ./path/to/peft-adapter
-
-# Compare fine-tuned vs base model
-python tf3.py compare --models gpt2 ./path/to/finetuned-model
+# Evaluate PEFT/LoRA adapter with standardized settings
+python tf3.py comprehensive \
+  --model ./path/to/peft-adapter \
+  --max-prompt-tokens 256 \
+  --prompt-split-ratio 0.7 \
+  --num-runs 3
 ```
 
 ### Custom Dataset Evaluation
 ```bash
-# Use different dataset
-python tf3.py comprehensive --dataset your-dataset-name --split validation
-
-# Specify dataset parameters
-python tf3.py comprehensive --num-samples 200 --max-length 1024
+# Use different dataset with standardized protocols
+python tf3.py comprehensive \
+  --dataset your-dataset-name \
+  --split validation \
+  --max-prompt-tokens 128 \
+  --max-new-tokens 128 \
+  --length-normalize
 ```
 
-### Research Experiment Workflow
-```bash
-# Complete research workflow
-cd experiments
+## 📊 Third-party Library Integration
 
-# 1. Run systematic studies
-python run_experiments.py --all
+### Text Quality Metrics
+- **`evaluate` library**: BLEU, ROUGE, BERTScore metrics
+- **Automatic model downloads**: BART-large-MNLI, RoBERTa models
+- **Graceful fallbacks**: Continues evaluation if specific metrics fail
 
-# 2. List completed experiments  
-python experiment_manager.py list --status completed
+### NLP Processing
+- **NLTK**: Advanced text processing and fluency analysis
+- **scikit-learn**: Cosine similarity and statistical analysis
+- **transformers**: Zero-shot classification and embeddings
 
-# 3. Generate comparison tables
-python analysis_tools.py latex exp1 exp2 exp3 --output comparison_table.tex
-
-# 4. Export all data
-python experiment_manager.py export exp1 exp2 exp3 --output final_results.csv
-```
-
-## 📚 Documentation
-
-- **`experiments/README.md`**: Complete experiment system documentation
-- **`lib/README.md`**: Core framework documentation
-- **`evals/README.md`**: Evaluation framework documentation
-- **Code Documentation**: Comprehensive docstrings throughout codebase
-- **Examples**: Working examples in demo scripts and CLI help
+### Statistical Analysis
+- **NumPy**: All statistical calculations (replacing custom implementations)
+- **SciPy**: Confidence interval calculations (with fallback)
+- **Optional dependencies**: Graceful degradation when libraries unavailable
 
 ## 🔧 Troubleshooting
 
@@ -311,34 +283,64 @@ If you encounter crashes or bus errors on Apple Silicon Macs:
 
 ### Memory Issues
 - Use smaller models (`gpt2` instead of `gpt2-large`)
-- Reduce `--num-samples` and `--max-length` parameters
+- Reduce `--num-samples`, `--max-prompt-tokens`, and `--max-new-tokens` parameters
 - Close other applications to free up memory
+
+### Third-party Library Issues
+- **Missing Java for LanguageTool**: Grammar checking automatically disabled
+- **Missing scipy**: Confidence intervals use approximate fallback
+- **Model download failures**: Evaluation continues with available metrics
 
 ### Dataset Loading Issues
 The framework includes automatic fallback to synthetic data generation if dataset loading fails.
 
-### Common Issues
-- **Missing dependencies**: Run `pip install -r requirements.txt`
-- **Model loading errors**: Check available models with `python tf3.py list`
-- **CUDA/MPS errors**: The system automatically falls back to CPU if GPU fails
+## 📈 Research Workflow Integration
+
+### Reproducible Evaluation
+```bash
+# Generate reproducible results with fixed parameters
+python tf3.py comprehensive \
+  --model gpt2 \
+  --seed 42 \
+  --max-prompt-tokens 256 \
+  --prompt-split-ratio 0.6 \
+  --num-runs 5 \
+  --output-dir reproducible_results/
+```
+
+### Statistical Significance Testing
+```bash
+# Compare models with statistical rigor
+python tf3.py compare \
+  --models model1 model2 model3 \
+  --num-runs 10 \
+  --confidence-level 0.99 \
+  --output-dir statistical_comparison/
+```
+
+### Publication-Ready Results
+- **Complete methodology documentation** in results
+- **Statistical analysis** with confidence intervals
+- **Reproducible evaluation protocols**
+- **Standardized metrics** for fair comparison
 
 ## 🚀 Next Steps
 
 ### For Research Paper Development
-1. **Start with Demo**: Run `python demo_experiment_system.py` to verify setup
-2. **Baseline Studies**: Execute `python experiments/run_experiments.py --baseline`
-3. **Parameter Analysis**: Run temperature and sample size studies
-4. **Fine-tuned Comparison**: Add your model paths and compare against baselines
-5. **Paper Generation**: Export results and generate LaTeX tables
+1. **Start with Demo**: Run `python tf3.py test` to verify setup
+2. **Standardized Evaluation**: Use consistent parameters across all experiments
+3. **Statistical Analysis**: Run multiple evaluations for significance testing
+4. **Model Comparison**: Compare models with identical evaluation protocols
+5. **Results Export**: Generate publication-ready statistical reports
 
 ### For Extension
-- **New Metrics**: Add evaluators to `evals/` directory
-- **Custom Experiments**: Modify `run_experiments.py` for specific studies
+- **New Metrics**: Add evaluators to `evals/` directory following the base class pattern
+- **Custom Statistical Analysis**: Extend statistical methods in `base.py`
 - **Additional Models**: System supports any Hugging Face compatible model
-- **Dataset Integration**: Add new datasets through `lib/dataset_utils.py`
+- **Dataset Integration**: Add new datasets through standardized prompt preparation
 
 ---
 
-**Status: ✅ FULLY IMPLEMENTED AND TESTED**
+**Status: ✅ FULLY IMPLEMENTED WITH STANDARDIZED PROTOCOLS**
 
-The TinyFabulist project provides a complete, production-ready research framework for systematic evaluation and comparison of language models on fable completion tasks, with particular optimization for Apple Silicon hardware and comprehensive experiment tracking for academic paper development. 
+The TinyFabulist project provides a complete, production-ready research framework for systematic evaluation and comparison of language models on fable completion tasks, with standardized evaluation protocols, statistical analysis, comprehensive third-party library integration, and particular optimization for Apple Silicon hardware. 

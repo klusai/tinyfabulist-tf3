@@ -374,4 +374,122 @@ class ComprehensiveEvaluator(BaseEvaluator):
             metrics=overall_metrics,
             samples=all_sample_results[:10],  # Limit samples for output size
             metadata=metadata
-        ) 
+        )
+    
+    def run_statistical_evaluation(self, model, tokenizer, dataset=None) -> Dict[str, Any]:
+        """
+        Run comprehensive evaluation with statistical analysis
+        Returns both individual results and statistical summary
+        """
+        if self.config.num_evaluation_runs <= 1:
+            # Single run
+            result = self.run(model, tokenizer, dataset)
+            return {
+                'single_result': result,
+                'statistical_summary': None,
+                'methodology': self._get_methodology_info()
+            }
+        
+        # Multiple runs for statistical significance
+        self._log(f"Running {self.config.num_evaluation_runs} evaluations for statistical analysis...")
+        
+        all_results = self.run_multiple_evaluations(model, tokenizer, dataset)
+        
+        # Aggregate statistical analysis
+        statistical_summary = self._aggregate_statistical_results(all_results)
+        
+        # Generate comprehensive report
+        report = self.generate_statistical_report(all_results)
+        
+        return {
+            'all_results': all_results,
+            'statistical_summary': statistical_summary,
+            'report': report,
+            'methodology': self._get_methodology_info()
+        }
+    
+    def _get_methodology_info(self) -> Dict[str, Any]:
+        """Get methodology information for reporting"""
+        return {
+            'model_name': self.config.model_name,
+            'dataset_name': self.config.dataset_name,
+            'num_samples': self.config.num_samples,
+            'max_prompt_tokens': self.config.max_prompt_tokens,
+            'max_new_tokens': self.config.max_new_tokens,
+            'temperature': self.config.temperature,
+            'prompt_split_ratio': self.config.prompt_split_ratio,
+            'prompt_truncation_strategy': self.config.prompt_truncation_strategy,
+            'num_evaluation_runs': self.config.num_evaluation_runs,
+            'confidence_level': self.config.confidence_level,
+            'length_normalize_metrics': self.config.length_normalize_metrics,
+            'enabled_evaluators': self.enabled_evaluators
+        }
+    
+    def _aggregate_statistical_results(self, results: List[EvaluationResult]) -> Dict[str, Any]:
+        """
+        Aggregate results from multiple runs for statistical analysis
+        """
+        if len(results) <= 1:
+            return {}
+        
+        # Extract overall scores from each run
+        overall_scores = []
+        individual_metrics = {}
+        
+        for result in results:
+            if 'overall_score' in result.metrics:
+                overall_scores.append(result.metrics['overall_score'])
+            
+            # Collect all metrics for statistical analysis
+            for metric_name, value in result.metrics.items():
+                if isinstance(value, (int, float)):
+                    if metric_name not in individual_metrics:
+                        individual_metrics[metric_name] = []
+                    individual_metrics[metric_name].append(float(value))
+        
+        statistical_summary = {}
+        
+        # Overall score statistics
+        if overall_scores:
+            statistical_summary['overall_score'] = {
+                'mean': np.mean(overall_scores),
+                'std': np.std(overall_scores),
+                'min': min(overall_scores),
+                'max': max(overall_scores),
+                'values': overall_scores
+            }
+            
+            if self.config.report_confidence_intervals:
+                try:
+                    ci_lower, ci_upper = self.calculate_confidence_interval(overall_scores)
+                    statistical_summary['overall_score']['confidence_interval'] = {
+                        'lower': ci_lower,
+                        'upper': ci_upper,
+                        'level': self.config.confidence_level
+                    }
+                except:
+                    pass
+        
+        # Individual metric statistics
+        for metric_name, values in individual_metrics.items():
+            if len(values) >= 2:
+                statistical_summary[metric_name] = {
+                    'mean': np.mean(values),
+                    'std': np.std(values),
+                    'min': min(values),
+                    'max': max(values),
+                    'coefficient_of_variation': np.std(values) / np.mean(values) if np.mean(values) != 0 else 0
+                }
+                
+                if self.config.report_confidence_intervals:
+                    try:
+                        ci_lower, ci_upper = self.calculate_confidence_interval(values)
+                        statistical_summary[metric_name]['confidence_interval'] = {
+                            'lower': ci_lower,
+                            'upper': ci_upper,
+                            'level': self.config.confidence_level
+                        }
+                    except:
+                        pass
+        
+        return statistical_summary 

@@ -39,6 +39,27 @@ class EvaluationConfig:
     output_dir: Optional[str] = None
     save_generations: bool = False
     verbose: bool = True
+    
+    # Standardized prompt length controls
+    max_prompt_tokens: int = 256
+    min_prompt_tokens: int = 50
+    prompt_truncation_strategy: str = "right"  # "left", "right", or "middle"
+    
+    # Statistical rigor
+    num_evaluation_runs: int = 1
+    confidence_level: float = 0.95
+    random_seeds: List[int] = field(default_factory=lambda: [42, 123, 456])
+    
+    # Evaluation standards
+    min_samples_per_evaluation: int = 100
+    stratified_sampling: bool = True
+    prompt_split_ratio: float = 0.6  # 60% for prompt, 40% for reference
+    
+    # Reporting standards
+    report_confidence_intervals: bool = True
+    report_effect_sizes: bool = True
+    save_raw_results: bool = True
+    length_normalize_metrics: bool = True
 
 
 @dataclass 
@@ -116,8 +137,8 @@ class BaseEvaluator(ABC):
     
     def prepare_test_data(self, dataset, num_samples: Optional[int] = None) -> List[Dict[str, Any]]:
         """
-        Prepare test data from dataset
-        Default implementation for fable completion tasks
+        Prepare test data with standardized prompt length controls
+        Uses token-based splitting for consistent evaluation conditions
         """
         if num_samples is None:
             num_samples = self.config.num_samples
@@ -128,24 +149,134 @@ class BaseEvaluator(ABC):
             dataset = dataset.select(range(num_samples))
         
         test_data = []
+        skipped_samples = 0
+        
         for example in dataset:
             fable = example['fable']
             
-            # Split into prompt and reference for completion task
-            sentences = fable.split('.')
-            if len(sentences) >= 3:
-                prompt = '.'.join(sentences[:2]) + '.'
-                reference = '.'.join(sentences[2:]).strip()
+            # Create standardized prompt using token-based splitting
+            prompt_data = self._create_standardized_prompt(fable)
+            
+            if prompt_data is None:
+                skipped_samples += 1
+                continue
                 
-                if reference:  # Ensure we have a reference
-                    test_data.append({
-                        'prompt': prompt,
-                        'reference': reference,
-                        'full_text': fable,
-                        'original_example': example
-                    })
+            test_data.append({
+                'prompt': prompt_data['prompt'],
+                'reference': prompt_data['reference'],
+                'full_text': fable,
+                'prompt_length_tokens': prompt_data['prompt_length'],
+                'reference_length_tokens': prompt_data['reference_length'],
+                'split_ratio': prompt_data['split_ratio'],
+                'original_example': example
+            })
+        
+        if skipped_samples > 0 and self.config.verbose:
+            self._log(f"Skipped {skipped_samples} samples due to length constraints")
         
         return test_data[:num_samples]
+    
+    def _create_standardized_prompt(self, fable_text: str) -> Optional[Dict[str, Any]]:
+        """
+        Create standardized prompts with fixed token-based length controls
+        
+        Args:
+            fable_text: Full fable text
+            
+        Returns:
+            Dictionary with prompt data or None if sample should be skipped
+        """
+        # Import tokenizer here to avoid circular imports
+        from transformers import AutoTokenizer
+        
+        # Use a simple tokenizer for length estimation
+        # In practice, this should use the same tokenizer as the model
+        try:
+            tokenizer = AutoTokenizer.from_pretrained("gpt2")
+        except:
+            # Fallback to simple word-based tokenization
+            tokens = fable_text.split()
+            total_tokens = len(tokens)
+            
+            # Use word-based splitting as fallback
+            split_point = int(total_tokens * self.config.prompt_split_ratio)
+            
+            if split_point < self.config.min_prompt_tokens // 4:  # Rough conversion
+                split_point = self.config.min_prompt_tokens // 4
+            if total_tokens - split_point < 10:  # Minimum reference
+                split_point = total_tokens - 10
+                
+            if split_point <= 0 or split_point >= total_tokens:
+                return None
+                
+            prompt = ' '.join(tokens[:split_point])
+            reference = ' '.join(tokens[split_point:])
+            
+            return {
+                'prompt': prompt,
+                'reference': reference,
+                'prompt_length': split_point,
+                'reference_length': total_tokens - split_point,
+                'split_ratio': split_point / total_tokens
+            }
+        
+        # Tokenize the full fable
+        tokens = tokenizer.encode(fable_text)
+        total_tokens = len(tokens)
+        
+        # Check minimum length requirements
+        min_total_tokens = self.config.min_prompt_tokens + 20  # 20 tokens minimum for reference
+        if total_tokens < min_total_tokens:
+            return None
+        
+        # Calculate split point based on configuration
+        split_point = int(total_tokens * self.config.prompt_split_ratio)
+        
+        # Ensure minimum prompt length
+        if split_point < self.config.min_prompt_tokens:
+            split_point = self.config.min_prompt_tokens
+            
+        # Ensure minimum reference length
+        min_reference_tokens = 20
+        if total_tokens - split_point < min_reference_tokens:
+            split_point = total_tokens - min_reference_tokens
+            
+        # Final validation
+        if split_point <= 0 or split_point >= total_tokens:
+            return None
+        
+        # Apply prompt length limit
+        if split_point > self.config.max_prompt_tokens:
+            if self.config.prompt_truncation_strategy == "right":
+                split_point = self.config.max_prompt_tokens
+            elif self.config.prompt_truncation_strategy == "left":
+                # Keep the end of the prompt
+                start_point = split_point - self.config.max_prompt_tokens
+                prompt_tokens = tokens[start_point:split_point]
+                reference_tokens = tokens[split_point:]
+            else:  # middle truncation
+                # Keep beginning and end, remove middle
+                keep_start = self.config.max_prompt_tokens // 2
+                keep_end = self.config.max_prompt_tokens - keep_start
+                prompt_tokens = tokens[:keep_start] + tokens[split_point-keep_end:split_point]
+                reference_tokens = tokens[split_point:]
+        
+        # Standard case: right truncation or no truncation needed
+        if self.config.prompt_truncation_strategy == "right" or split_point <= self.config.max_prompt_tokens:
+            prompt_tokens = tokens[:split_point]
+            reference_tokens = tokens[split_point:]
+        
+        # Decode back to text
+        prompt = tokenizer.decode(prompt_tokens, skip_special_tokens=True)
+        reference = tokenizer.decode(reference_tokens, skip_special_tokens=True)
+        
+        return {
+            'prompt': prompt,
+            'reference': reference,
+            'prompt_length': len(prompt_tokens),
+            'reference_length': len(reference_tokens),
+            'split_ratio': len(prompt_tokens) / total_tokens
+        }
     
     def generate_completion(self, model, tokenizer, prompt: str, max_new_tokens: int = 150) -> str:
         """
@@ -272,4 +403,162 @@ class BaseEvaluator(ABC):
             if i < 5 and self.config.verbose: # Log first few samples
                 self._log_sample(i, item['prompt'], completion)
 
-        return completions 
+        return completions
+
+    def calculate_confidence_interval(self, values: List[float], 
+                                    confidence: float = None) -> tuple[float, float]:
+        """Calculate confidence interval for metric values"""
+        if confidence is None:
+            confidence = self.config.confidence_level
+            
+        try:
+            from scipy import stats
+            mean = np.mean(values)
+            sem = stats.sem(values)  # Standard error of mean
+            h = sem * stats.t.ppf((1 + confidence) / 2., len(values) - 1)
+            return mean - h, mean + h
+        except ImportError:
+            # Fallback to simple standard deviation if scipy not available
+            mean = np.mean(values)
+            std = np.std(values)
+            margin = 1.96 * std / np.sqrt(len(values))  # Approximate 95% CI
+            return mean - margin, mean + margin
+    
+    def calculate_length_normalized_metrics(self, predictions: List[str], 
+                                          references: List[str]) -> Dict[str, float]:
+        """
+        Calculate metrics normalized by length for fair comparison
+        """
+        if not self.config.length_normalize_metrics:
+            return {}
+            
+        metrics = {}
+        
+        # Length statistics
+        pred_lengths = [len(p.split()) for p in predictions]
+        ref_lengths = [len(r.split()) for r in references]
+        
+        if pred_lengths and ref_lengths:
+            metrics.update({
+                'avg_prediction_length': np.mean(pred_lengths),
+                'avg_reference_length': np.mean(ref_lengths),
+                'length_ratio': np.mean(pred_lengths) / np.mean(ref_lengths) if np.mean(ref_lengths) > 0 else 0,
+                'length_variance_pred': np.var(pred_lengths),
+                'length_variance_ref': np.var(ref_lengths),
+                'length_std_pred': np.std(pred_lengths),
+                'length_std_ref': np.std(ref_lengths)
+            })
+        
+        return metrics
+    
+    def run_multiple_evaluations(self, model, tokenizer, dataset=None) -> List[EvaluationResult]:
+        """
+        Run multiple evaluations with different seeds for statistical significance
+        """
+        if self.config.num_evaluation_runs <= 1:
+            return [self.run(model, tokenizer, dataset)]
+        
+        results = []
+        original_seed = self.config.seed
+        
+        seeds_to_use = self.config.random_seeds[:self.config.num_evaluation_runs]
+        if len(seeds_to_use) < self.config.num_evaluation_runs:
+            # Generate additional seeds if needed
+            additional_seeds = [original_seed + i * 100 for i in range(len(seeds_to_use), self.config.num_evaluation_runs)]
+            seeds_to_use.extend(additional_seeds)
+        
+        for i, seed in enumerate(seeds_to_use):
+            if self.config.verbose:
+                self._log(f"Running evaluation {i+1}/{self.config.num_evaluation_runs} with seed {seed}")
+            
+            # Update seed for this run
+            self.config.seed = seed
+            
+            # Run evaluation
+            result = self.run(model, tokenizer, dataset)
+            result.metadata['run_number'] = i + 1
+            result.metadata['seed_used'] = seed
+            results.append(result)
+        
+        # Restore original seed
+        self.config.seed = original_seed
+        
+        return results
+    
+    def generate_statistical_report(self, results: List[EvaluationResult]) -> str:
+        """
+        Generate evaluation report with statistical analysis
+        """
+        if len(results) == 1:
+            return results[0].summary()
+        
+        report = []
+        
+        # Header
+        report.append("=" * 80)
+        report.append("STATISTICAL EVALUATION REPORT")
+        report.append("=" * 80)
+        
+        # Methodology section
+        report.append("## Methodology")
+        report.append(f"- Model: {self.config.model_name}")
+        report.append(f"- Dataset: {self.config.dataset_name}")
+        report.append(f"- Evaluation samples: {self.config.num_samples}")
+        report.append(f"- Max prompt tokens: {self.config.max_prompt_tokens}")
+        report.append(f"- Max generation tokens: {self.config.max_new_tokens}")
+        report.append(f"- Temperature: {self.config.temperature}")
+        report.append(f"- Prompt split ratio: {self.config.prompt_split_ratio}")
+        report.append(f"- Number of runs: {len(results)}")
+        
+        seeds_used = [r.metadata.get('seed_used', 'unknown') for r in results]
+        report.append(f"- Seeds used: {seeds_used}")
+        
+        # Statistical analysis
+        report.append("\n## Statistical Analysis")
+        
+        # Collect all metric names
+        all_metrics = set()
+        for result in results:
+            all_metrics.update(result.metrics.keys())
+        
+        # Analyze each metric
+        for metric_name in sorted(all_metrics):
+            values = []
+            for result in results:
+                if metric_name in result.metrics:
+                    val = result.metrics[metric_name]
+                    if isinstance(val, (int, float)):
+                        values.append(float(val))
+            
+            if len(values) < 2:
+                continue
+                
+            mean_val = np.mean(values)
+            std_val = np.std(values)
+            
+            report.append(f"\n### {metric_name.upper().replace('_', ' ')}")
+            report.append(f"- Mean: {mean_val:.4f}")
+            report.append(f"- Std Dev: {std_val:.4f}")
+            report.append(f"- Min: {min(values):.4f}")
+            report.append(f"- Max: {max(values):.4f}")
+            
+            if self.config.report_confidence_intervals and len(values) >= 2:
+                try:
+                    ci_lower, ci_upper = self.calculate_confidence_interval(values)
+                    report.append(f"- {self.config.confidence_level*100:.0f}% CI: [{ci_lower:.4f}, {ci_upper:.4f}]")
+                except:
+                    pass
+            
+            report.append(f"- Individual runs: {[f'{v:.4f}' for v in values]}")
+        
+        # Execution time analysis
+        exec_times = [r.execution_time for r in results]
+        if exec_times:
+            report.append(f"\n## Execution Time Analysis")
+            report.append(f"- Mean execution time: {np.mean(exec_times):.2f}s")
+            report.append(f"- Std execution time: {np.std(exec_times):.2f}s")
+            report.append(f"- Total time: {sum(exec_times):.2f}s")
+        
+        report.append("=" * 80)
+        
+        return "\n".join(report) 

@@ -1,45 +1,52 @@
 """
-TinyFabulist Evaluation Framework
-A modular system for evaluating text generation models on fable completion tasks.
+TinyFabulist Evaluation Framework - Refactored
+A minimal, elegant evaluation system for text generation models.
 """
 
-from .base import BaseEvaluator, EvaluationResult, EvaluationConfig
-from .perplexity import PerplexityEvaluator
-from .text_quality import TextQualityEvaluator
-from .fluency import FluencyEvaluator
-from .semantic_coherence import SemanticCoherenceEvaluator
-from .comprehensive import ComprehensiveEvaluator
+from .core import EvaluationRunner, EvaluationConfig, EvaluationResult
+from .metrics import PerplexityEvaluator, SemanticEvaluator, FluencyEvaluator, QualityEvaluator
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"
 
 __all__ = [
-    "BaseEvaluator",
-    "EvaluationResult", 
-    "EvaluationConfig",
+    "EvaluationRunner", 
+    "EvaluationConfig", 
+    "EvaluationResult",
     "PerplexityEvaluator",
-    "TextQualityEvaluator",
-    "FluencyEvaluator", 
-    "SemanticCoherenceEvaluator",
-    "ComprehensiveEvaluator"
+    "SemanticEvaluator", 
+    "FluencyEvaluator",
+    "QualityEvaluator"
 ]
 
-# Registry of available evaluators
-EVALUATOR_REGISTRY = {
-    "perplexity": PerplexityEvaluator,
-    "text_quality": TextQualityEvaluator,
-    "fluency": FluencyEvaluator,
-    "semantic_coherence": SemanticCoherenceEvaluator,
-    "comprehensive": ComprehensiveEvaluator
-}
 
-def get_evaluator(name: str, **kwargs):
-    """Factory function to get evaluator by name"""
-    if name not in EVALUATOR_REGISTRY:
-        available = list(EVALUATOR_REGISTRY.keys())
-        raise ValueError(f"Unknown evaluator '{name}'. Available: {available}")
+def create_runner(config: EvaluationConfig = None, model=None, tokenizer=None) -> EvaluationRunner:
+    """
+    Factory function to create a runner with all available evaluators.
     
-    return EVALUATOR_REGISTRY[name](**kwargs)
+    Args:
+        config: Evaluation configuration
+        model: Language model (required for perplexity)
+        tokenizer: Tokenizer (required for perplexity)
+        
+    Returns:
+        Configured EvaluationRunner
+    """
+    if config is None:
+        config = EvaluationConfig()
+    
+    runner = EvaluationRunner(config)
+    
+    # Add evaluators based on availability
+    if model is not None and tokenizer is not None:
+        runner.add_evaluator(PerplexityEvaluator(model, tokenizer, config.device, config.max_length))
+    
+    runner.add_evaluator(FluencyEvaluator())
+    runner.add_evaluator(SemanticEvaluator())
+    runner.add_evaluator(QualityEvaluator())
+    
+    return runner
 
-def list_evaluators():
+
+def list_evaluators() -> list:
     """List all available evaluators"""
-    return list(EVALUATOR_REGISTRY.keys()) 
+    return ["perplexity", "fluency", "semantic", "quality"] 

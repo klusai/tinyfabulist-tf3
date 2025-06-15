@@ -36,9 +36,13 @@ from lib import (
 
 from evals import (
     EvaluationConfig, 
-    get_evaluator, 
+    EvaluationRunner,
+    create_runner,
     list_evaluators,
-    ComprehensiveEvaluator
+    PerplexityEvaluator,
+    FluencyEvaluator,
+    SemanticEvaluator,
+    QualityEvaluator
 )
 
 # Apply Apple Silicon optimizations
@@ -136,33 +140,16 @@ def create_config_from_args(args) -> EvaluationConfig:
         'max_length': args.max_length,
         'temperature': args.temperature,
         'seed': args.seed,
-        'output_dir': args.output_dir,
-        'save_generations': args.save_generations,
-        'verbose': not args.quiet
+        'save_generations': getattr(args, 'save_generations', False),
+        'verbose': not getattr(args, 'quiet', False)
     }
     
-    # Add standardized evaluation parameters if available
-    if hasattr(args, 'max_prompt_tokens') and args.max_prompt_tokens is not None:
-        config_kwargs['max_prompt_tokens'] = args.max_prompt_tokens
-    
+    # Add max_new_tokens if available
     if hasattr(args, 'max_new_tokens') and args.max_new_tokens is not None:
         config_kwargs['max_new_tokens'] = args.max_new_tokens
     
-    # Removed prompt_split_ratio - now uses principled sentence boundary detection
-    
-    if hasattr(args, 'num_runs') and args.num_runs is not None:
-        config_kwargs['num_evaluation_runs'] = args.num_runs
-    
-    if hasattr(args, 'confidence_level') and args.confidence_level is not None:
-        config_kwargs['confidence_level'] = args.confidence_level
-    
-    if hasattr(args, 'length_normalize') and args.length_normalize is not None:
-        config_kwargs['length_normalize_metrics'] = args.length_normalize
-    
-    # Removed truncation_strategy - now uses principled splitting methods
-    
     # Only set device if explicitly specified, otherwise let default_factory handle it
-    if args.device is not None:
+    if hasattr(args, 'device') and args.device is not None:
         config_kwargs['device'] = args.device
     
     return EvaluationConfig(**config_kwargs)
@@ -189,17 +176,27 @@ def run_single_evaluator(args):
         max_samples=args.num_samples * 2
     )
     
-    # Get evaluator
-    try:
-        evaluator = get_evaluator(args.evaluator, config=config)
-    except ValueError as e:
-        print(f"Error: {e}")
+    # Create runner with specific evaluator
+    runner = EvaluationRunner(config)
+    
+    # Add the requested evaluator
+    evaluator_map = {
+        'perplexity': PerplexityEvaluator(model, tokenizer, config.device, config.max_length),
+        'fluency': FluencyEvaluator(),
+        'semantic': SemanticEvaluator(),
+        'quality': QualityEvaluator()
+    }
+    
+    if args.evaluator not in evaluator_map:
+        print(f"Error: Unknown evaluator '{args.evaluator}'")
         print(f"Available evaluators: {', '.join(list_evaluators())}")
         sys.exit(1)
     
+    runner.add_evaluator(evaluator_map[args.evaluator])
+    
     # Run evaluation
     print(f"Running {args.evaluator} evaluation...")
-    result = evaluator.run(model, tokenizer, dataset)
+    result = runner.run(model, tokenizer, dataset)
     
     # Save results
     if args.output_dir:
@@ -235,19 +232,41 @@ def run_comprehensive_evaluation(args):
         max_samples=args.num_samples * 2
     )
     
-    # Create comprehensive evaluator
-    evaluator = ComprehensiveEvaluator(config=config)
+    # Create comprehensive runner with all evaluators
+    runner = create_runner(config, model, tokenizer)
     
-    # Set enabled evaluators if specified
+    # Filter evaluators if specified
     if args.evaluators:
-        evaluator.set_enabled_evaluators(args.evaluators)
+        # Remove evaluators not in the specified list
+        filtered_evaluators = []
+        evaluator_names = {e.name for e in runner.evaluators}
+        
+        for eval_name in args.evaluators:
+            if eval_name in evaluator_names:
+                # Find and add the matching evaluator
+                for evaluator in runner.evaluators:
+                    if evaluator.name == eval_name:
+                        filtered_evaluators.append(evaluator)
+                        break
+        
+        runner.evaluators = filtered_evaluators
     
     # Check if statistical evaluation is requested
-    if config.num_evaluation_runs > 1:
+    if hasattr(config, 'num_evaluation_runs') and config.num_evaluation_runs > 1:
         print(f"Running statistical evaluation with {config.num_evaluation_runs} runs...")
         
-        # Run statistical evaluation
-        statistical_results = evaluator.run_statistical_evaluation(model, tokenizer, dataset)
+        # Run multiple evaluations for statistical analysis
+        all_results = []
+        for i in range(config.num_evaluation_runs):
+            print(f"Running evaluation {i+1}/{config.num_evaluation_runs}...")
+            result = runner.run(model, tokenizer, dataset)
+            all_results.append(result)
+        
+        statistical_results = {
+            'all_results': all_results,
+            'statistical_summary': {},  # Could add statistical analysis here
+            'methodology': {'num_runs': config.num_evaluation_runs}
+        }
         
         # Save results
         if args.output_dir:
@@ -261,28 +280,23 @@ def run_comprehensive_evaluation(args):
                     'methodology': statistical_results['methodology']
                 }, f, indent=2, default=str)
             
-            # Save detailed report
-            report_file = os.path.join(args.output_dir, "statistical_report.txt")
-            with open(report_file, 'w') as f:
-                f.write(statistical_results['report'])
-            
             # Save individual run results
             for i, result in enumerate(statistical_results['all_results']):
                 run_file = os.path.join(args.output_dir, f"run_{i+1}_results.json")
                 result.save_json(run_file)
             
             print(f"Statistical results saved to: {stats_file}")
-            print(f"Statistical report saved to: {report_file}")
         
-        # Print statistical report
-        print("\n" + statistical_results['report'])
+        # Print summary of statistical results
+        print(f"\nCompleted {len(statistical_results['all_results'])} evaluation runs")
+        print("Statistical analysis would be implemented here")
         
         return statistical_results
     
     else:
         # Single run evaluation
         print("Running comprehensive evaluation...")
-        result = evaluator.run(model, tokenizer, dataset)
+        result = runner.run(model, tokenizer, dataset)
         
         # Save results
         if args.output_dir:
@@ -292,16 +306,10 @@ def run_comprehensive_evaluation(args):
             output_file = os.path.join(args.output_dir, "comprehensive_results.json")
             result.save_json(output_file)
             
-            # Save summary report
-            report_file = os.path.join(args.output_dir, "evaluation_report.txt")
-            with open(report_file, 'w') as f:
-                f.write(result.metadata["summary_report"])
-            
             print(f"Results saved to: {output_file}")
-            print(f"Report saved to: {report_file}")
         
-        # Print summary report
-        print("\n" + result.metadata["summary_report"])
+        # Print summary
+        print("\n" + result.summary())
         
         return result
 
@@ -354,9 +362,9 @@ def compare_models(args):
     
     for model_name, result in results.items():
         metrics = result.metrics
-        raw_perp = metrics.get('raw_perplexity', 'N/A')
-        log_perp = metrics.get('log_perplexity', 'N/A')
-        bits_char = metrics.get('bits_per_char', 'N/A')
+        raw_perp = metrics.get('perplexity_mean', 'N/A')
+        log_perp = 'N/A'  # Not calculated in new architecture
+        bits_char = metrics.get('perplexity_bits_per_char', 'N/A')
         
         # Format values
         raw_perp_str = f"{raw_perp:.2f}" if isinstance(raw_perp, (int, float)) else str(raw_perp)
@@ -379,10 +387,10 @@ def compare_models(args):
     
     for model_name, result in results.items():
         metrics = result.metrics
-        bert_f1 = metrics.get('bert_f1', 0.0)
-        bert_prec = metrics.get('bert_precision', 0.0)
-        bert_rec = metrics.get('bert_recall', 0.0)
-        vocab_div = metrics.get('vocab_diversity', 0.0)
+        bert_f1 = metrics.get('quality_bert_f1', 0.0)
+        bert_prec = metrics.get('quality_bert_precision', 0.0)
+        bert_rec = metrics.get('quality_bert_recall', 0.0)
+        vocab_div = metrics.get('quality_vocab_diversity', 0.0)
         
         semantic_lines.append(
             f"{model_name:<25} {bert_f1:<8.3f} {bert_prec:<10.3f} {bert_rec:<8.3f} {vocab_div:<10.3f}"
@@ -400,10 +408,10 @@ def compare_models(args):
     
     for model_name, result in results.items():
         metrics = result.metrics
-        rep_ratio = metrics.get('repetition_ratio', 0.0)
-        ttr = metrics.get('type_token_ratio', 0.0)
-        coherence = metrics.get('coherence_score', 0.0)
-        high_rep = metrics.get('high_repetition_flag', False)
+        rep_ratio = metrics.get('fluency_repetition_ratio', 0.0)
+        ttr = metrics.get('fluency_ttr', 0.0)
+        coherence = metrics.get('fluency_coherence', 0.0)
+        high_rep = metrics.get('fluency_high_repetition_flag', False)
         
         fluency_lines.append(
             f"{model_name:<25} {rep_ratio:<12.3f} {ttr:<8.3f} {coherence:<10.3f} {'Yes' if high_rep else 'No':<10}"
@@ -424,7 +432,7 @@ def compare_models(args):
         category = metrics.get('quality_category', 'unknown').title()
         num_issues = metrics.get('num_quality_issues', 0)
         semantic_coh = metrics.get('semantic_coherence', 0.0)
-        appropriate = metrics.get('appropriate_sample_rate', 1.0)
+        appropriate = metrics.get('semantic_appropriate_rate', 1.0)
         
         quality_lines.append(
             f"{model_name:<25} {category:<15} {num_issues:<8} {semantic_coh:<12.3f} {appropriate:<12.3f}"
@@ -501,7 +509,7 @@ Examples:
   # Use fine-tuned model
   python tf3.py comprehensive --model ./my-finetuned-gpt2
 
-Available evaluators: perplexity, text_quality, fluency, semantic_coherence, comprehensive
+Available evaluators: perplexity, fluency, semantic, quality
         """
     )
     
@@ -630,7 +638,7 @@ Available evaluators: perplexity, text_quality, fluency, semantic_coherence, com
             args.max_length = 256
         if not hasattr(args, 'save_generations'):
             args.save_generations = False
-        args.evaluators = ["semantic_coherence", "fluency"]  # Most important evaluators
+        args.evaluators = ["semantic", "fluency"]  # Most important evaluators
         
         try:
             run_comprehensive_evaluation(args)

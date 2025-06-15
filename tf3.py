@@ -501,7 +501,7 @@ Examples:
   # Use fine-tuned model
   python tf3.py comprehensive --model ./my-finetuned-gpt2
 
-Available evaluators: perplexity, text_quality, fluency, fable_structure, comprehensive
+Available evaluators: perplexity, text_quality, fluency, semantic_coherence, comprehensive
         """
     )
     

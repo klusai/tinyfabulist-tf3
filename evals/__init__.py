@@ -7,7 +7,6 @@ from .base import BaseEvaluator, EvaluationResult, EvaluationConfig
 from .perplexity import PerplexityEvaluator
 from .text_quality import TextQualityEvaluator
 from .fluency import FluencyEvaluator
-from .fable_structure import FableStructureEvaluator
 from .semantic_coherence import SemanticCoherenceEvaluator
 from .comprehensive import ComprehensiveEvaluator
 
@@ -20,7 +19,6 @@ __all__ = [
     "PerplexityEvaluator",
     "TextQualityEvaluator",
     "FluencyEvaluator", 
-    "FableStructureEvaluator",
     "SemanticCoherenceEvaluator",
     "ComprehensiveEvaluator"
 ]
@@ -30,7 +28,6 @@ EVALUATOR_REGISTRY = {
     "perplexity": PerplexityEvaluator,
     "text_quality": TextQualityEvaluator,
     "fluency": FluencyEvaluator,
-    "fable_structure": FableStructureEvaluator,
     "semantic_coherence": SemanticCoherenceEvaluator,
     "comprehensive": ComprehensiveEvaluator
 }

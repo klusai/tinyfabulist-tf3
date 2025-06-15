@@ -183,7 +183,7 @@ tf3/
 │   ├── text_quality.py      # BERTScore-only semantic similarity
 │   ├── perplexity.py        # Raw perplexity measurement
 │   ├── fluency.py           # Repetition and fluency analysis
-│   ├── fable_structure.py   # Domain-specific structure evaluation
+│   ├── semantic_coherence.py # Semantic coherence evaluation
 │   └── semantic_coherence.py # Topic consistency and appropriateness
 ├── lib/                     # Utilities and Apple Silicon optimization
 ├── tf3.py                   # Main CLI with improved comparison

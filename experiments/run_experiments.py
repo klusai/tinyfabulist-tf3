@@ -101,7 +101,7 @@ def run_evaluator_comparison():
     manager = ExperimentManager()
     runner = ExperimentRunner(manager)
     
-    evaluators_to_test = ["perplexity", "text_quality", "fluency", "fable_structure"]
+    evaluators_to_test = ["perplexity", "text_quality", "fluency", "semantic_coherence"]
     
     experiments = []
     for evaluator in evaluators_to_test:

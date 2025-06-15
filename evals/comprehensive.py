@@ -8,7 +8,6 @@ from .base import BaseEvaluator, EvaluationResult, EvaluationConfig
 from .perplexity import PerplexityEvaluator
 from .text_quality import TextQualityEvaluator
 from .fluency import FluencyEvaluator
-from .fable_structure import FableStructureEvaluator
 from .semantic_coherence import SemanticCoherenceEvaluator
 
 
@@ -22,7 +21,6 @@ class ComprehensiveEvaluator(BaseEvaluator):
         self.perplexity_evaluator = PerplexityEvaluator(config)
         self.text_quality_evaluator = TextQualityEvaluator(config)
         self.fluency_evaluator = FluencyEvaluator(config)
-        self.fable_structure_evaluator = FableStructureEvaluator(config)
         self.semantic_coherence_evaluator = SemanticCoherenceEvaluator(config)
         
         # Define which evaluators to run (can be configured)
@@ -30,7 +28,6 @@ class ComprehensiveEvaluator(BaseEvaluator):
             'perplexity': self.perplexity_evaluator,
             'text_quality': self.text_quality_evaluator,
             'fluency': self.fluency_evaluator,
-            'fable_structure': self.fable_structure_evaluator,
             'semantic_coherence': self.semantic_coherence_evaluator
         }
         
@@ -88,14 +85,6 @@ class ComprehensiveEvaluator(BaseEvaluator):
                 metrics['high_repetition_flag'] = True
             else:
                 metrics['high_repetition_flag'] = False
-        
-        # Fable-specific structure
-        if 'fable_structure' in individual_results:
-            structure_metrics = individual_results['fable_structure'].metrics
-            metrics['narrative_flow'] = structure_metrics.get('avg_narrative_flow_score', 0.0)
-            metrics['moral_clarity'] = structure_metrics.get('avg_moral_clarity_score', 0.0)
-            metrics['has_conflict_rate'] = structure_metrics.get('has_conflict_percentage', 0.0) / 100.0
-            metrics['has_resolution_rate'] = structure_metrics.get('has_resolution_percentage', 0.0) / 100.0
         
         # Semantic coherence
         if 'semantic_coherence' in individual_results:
@@ -190,18 +179,6 @@ class ComprehensiveEvaluator(BaseEvaluator):
                 f"Type-Token Ratio: {overall_metrics.get('type_token_ratio', 'N/A'):.4f}",
                 f"Coherence Score: {overall_metrics.get('coherence_score', 'N/A'):.4f}",
                 f"High Repetition Flag: {overall_metrics.get('high_repetition_flag', False)}",
-                ""
-            ])
-        
-        # Fable structure
-        if 'fable_structure' in individual_results:
-            report_lines.extend([
-                "FABLE STRUCTURE",
-                "-" * 20,
-                f"Narrative Flow: {overall_metrics.get('narrative_flow', 'N/A'):.4f}",
-                f"Moral Clarity: {overall_metrics.get('moral_clarity', 'N/A'):.4f}",
-                f"Has Conflict Rate: {overall_metrics.get('has_conflict_rate', 'N/A'):.2%}",
-                f"Has Resolution Rate: {overall_metrics.get('has_resolution_rate', 'N/A'):.2%}",
                 ""
             ])
         

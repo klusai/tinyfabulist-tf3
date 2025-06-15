@@ -10,10 +10,12 @@ import time
 from datetime import datetime
 import sys
 import os
+import numpy as np
 
 # Add lib directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from lib import get_optimal_device, setup_model_for_device, SafeGeneration, optimize_for_apple_silicon, get_logger
+from lib import get_optimal_device, optimize_for_apple_silicon
+from lib.logging_utils import get_logger
 
 # Apply Apple Silicon optimizations
 optimize_for_apple_silicon()
@@ -27,9 +29,10 @@ class EvaluationConfig:
     """Configuration for evaluation runs"""
     model_name: str = "gpt2"
     dataset_name: str = "klusai/ds-tf1-en-3m"
-    dataset_split: str = "test"
+    dataset_split: str = "Test"
     num_samples: int = 100
     max_length: int = 512
+    max_new_tokens: int = 256
     temperature: float = 0.8
     seed: int = 42
     device: str = field(default_factory=lambda: get_optimal_device(verbose=False))
@@ -180,7 +183,15 @@ class BaseEvaluator(ABC):
     
     def _log(self, message: str, **kwargs):
         """Log message using the evaluation logger"""
-        self.logger.info(f"[{self.name}] {message}", **kwargs)
+        if self.config.verbose:
+            self.logger.info(message, **kwargs)
+    
+    def _log_sample(self, index: int, prompt: str, completion: str):
+        """Helper for logging samples"""
+        self.logger.info(f"--- Sample {index+1} ---")
+        self.logger.info(f"Prompt: {prompt[:200]}...")
+        self.logger.info(f"Completion: {completion[:300]}...")
+        self.logger.info("--------------------")
     
     def run(self, model, tokenizer, dataset=None) -> EvaluationResult:
         """
@@ -221,42 +232,44 @@ class BaseEvaluator(ABC):
         
         return result
 
+    def _generate_completions(self, model, tokenizer, test_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Generate fable completions for a given list of prompts."""
+        
+        completions = []
+        
+        # Use a pipeline for efficient generation if available
+        from transformers import pipeline
+        generator = pipeline('text-generation', model=model, tokenizer=tokenizer, device=model.device)
+        
+        self._log(f"Generating {len(test_data)} completions...")
+        
+        prompts = [item['prompt'] for item in test_data]
+        
+        # Batch generation for efficiency
+        generated_outputs = generator(
+            prompts,
+            max_new_tokens=self.config.max_new_tokens,
+            num_return_sequences=1,
+            temperature=self.config.temperature,
+            pad_token_id=tokenizer.eos_token_id,
+            truncation=True
+        )
+        
+        for i, (item, output) in enumerate(zip(test_data, generated_outputs)):
+            # The output from the pipeline is a list containing a dict
+            generated_text = output[0]['generated_text']
+            
+            # Remove the prompt from the beginning of the generated text
+            if generated_text.startswith(item['prompt']):
+                completion = generated_text[len(item['prompt']):].strip()
+            else:
+                completion = generated_text.strip()
+            
+            completed_item = item.copy()
+            completed_item['generated_text'] = completion
+            completions.append(completed_item)
+            
+            if i < 5 and self.config.verbose: # Log first few samples
+                self._log_sample(i, item['prompt'], completion)
 
-class MetricCalculator:
-    """Utility class for common metric calculations"""
-    
-    @staticmethod
-    def safe_divide(numerator: float, denominator: float, default: float = 0.0) -> float:
-        """Safe division that handles zero denominator"""
-        return numerator / denominator if denominator != 0 else default
-    
-    @staticmethod
-    def mean(values: List[float]) -> float:
-        """Calculate mean of values"""
-        return sum(values) / len(values) if values else 0.0
-    
-    @staticmethod
-    def std(values: List[float]) -> float:
-        """Calculate standard deviation"""
-        if len(values) <= 1:
-            return 0.0
-        
-        mean_val = MetricCalculator.mean(values)
-        variance = sum((x - mean_val) ** 2 for x in values) / (len(values) - 1)
-        return variance ** 0.5
-    
-    @staticmethod
-    def percentile(values: List[float], p: float) -> float:
-        """Calculate percentile of values"""
-        if not values:
-            return 0.0
-        
-        sorted_values = sorted(values)
-        index = (len(sorted_values) - 1) * p / 100
-        
-        if index == int(index):
-            return sorted_values[int(index)]
-        else:
-            lower = sorted_values[int(index)]
-            upper = sorted_values[int(index) + 1]
-            return lower + (upper - lower) * (index - int(index)) 
+        return completions 

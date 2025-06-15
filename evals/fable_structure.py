@@ -3,15 +3,28 @@ Fable structure evaluator for narrative elements specific to moral fables
 """
 
 import re
-from typing import Dict, List, Any, Set, Tuple
-from .base import BaseEvaluator, EvaluationResult, MetricCalculator
+from typing import Dict, List, Any, Set, Tuple, Optional
+from .base import BaseEvaluator, EvaluationResult, EvaluationConfig
+from transformers import pipeline
+import numpy as np
 
 
 class FableStructureEvaluator(BaseEvaluator):
     """Evaluator for fable-specific narrative structure and elements"""
     
-    def __init__(self, config=None):
+    def __init__(self, config: Optional[EvaluationConfig] = None):
         super().__init__(config)
+        
+        self._log("Initializing FableStructureEvaluator and loading classifier...")
+        try:
+            self.classifier = pipeline(
+                "zero-shot-classification", 
+                model="facebook/bart-large-mnli"
+            )
+            self._log("✓ Classifier loaded.")
+        except Exception as e:
+            self._log(f"Failed to load zero-shot classifier: {e}", level="error")
+            self.classifier = None
         
         # Define fable-specific vocabulary and patterns
         self.animal_characters = {
@@ -212,122 +225,83 @@ class FableStructureEvaluator(BaseEvaluator):
         }
     
     def evaluate(self, model, tokenizer, test_data: List[Dict[str, Any]]) -> EvaluationResult:
-        """Evaluate fable structure and elements"""
-        model.eval()
+        """
+        Evaluate fable structure using a zero-shot classification model.
+        Expects test_data to contain 'generated_text'.
+        """
         
-        # Generate completions
-        self._log("Generating completions for fable structure analysis...")
         sample_results = []
         
-        # Aggregate metrics collectors
-        structure_scores = []
-        moral_clarity_scores = []
-        style_scores = []
-        character_counts = []
-        setting_counts = []
-        
-        for i, sample in enumerate(test_data):
-            if i % 20 == 0:
-                self._log(f"Analyzing sample {i+1}/{len(test_data)}")
-            
-            prompt = sample['prompt']
-            
-            # Generate completion
-            completion = self.generate_completion(model, tokenizer, prompt)
-            full_text = prompt + " " + completion
-            
-            # Analyze structure
-            structure_analysis = self.analyze_narrative_structure(full_text)
-            moral_analysis = self.analyze_moral_clarity(full_text)
-            style_analysis = self.analyze_fable_style(full_text)
-            
-            # Collect scores for aggregation
-            structure_scores.append(structure_analysis['narrative_flow_score'])
-            moral_clarity_scores.append(moral_analysis['moral_clarity_score'])
-            style_scores.append(style_analysis['style_score'])
-            character_counts.append(len(structure_analysis['characters']))
-            setting_counts.append(len(structure_analysis['settings']))
-            
-            # Prepare sample result
-            sample_result = {
-                "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt,
-                "generated_text": full_text[:300] + "..." if len(full_text) > 300 else full_text,
-                "narrative_flow_score": structure_analysis['narrative_flow_score'],
-                "moral_clarity_score": moral_analysis['moral_clarity_score'],
-                "style_score": style_analysis['style_score'],
-                "character_count": len(structure_analysis['characters']),
-                "setting_count": len(structure_analysis['settings']),
-                "has_opening": structure_analysis['has_opening'],
-                "has_conflict": structure_analysis['has_conflict'],
-                "has_resolution": structure_analysis['has_resolution'],
-                "has_moral": structure_analysis['has_moral'],
-                "characters": list(structure_analysis['characters']),
-                "settings": list(structure_analysis['settings'])
-            }
-            
-            if self.config.save_generations:
-                sample_result.update({
-                    "full_generated_text": full_text,
-                    "detailed_structure": structure_analysis,
-                    "detailed_moral": moral_analysis,
-                    "detailed_style": style_analysis
-                })
-            
-            sample_results.append(sample_result)
-        
-        # Calculate aggregate metrics
-        self._log("Calculating aggregate fable structure metrics...")
-        
-        # Overall fable quality score (composite)
-        fable_quality_components = [
-            MetricCalculator.mean(structure_scores),
-            MetricCalculator.mean(moral_clarity_scores),
-            MetricCalculator.mean(style_scores)
+        # Candidate labels for fable structure classification
+        fable_labels = [
+            "clear narrative", "moral of the story", "character development", 
+            "has conflict", "has resolution", "is a complete story",
+            "confusing", "lacks a moral", "is just a list of events"
         ]
         
-        overall_fable_score = MetricCalculator.mean(fable_quality_components)
-        
-        # Structure element statistics
-        structure_elements = ['has_opening', 'has_conflict', 'has_resolution', 'has_moral']
-        structure_element_stats = {}
-        
-        for element in structure_elements:
-            element_presence = [sample[element] for sample in sample_results]
-            structure_element_stats[f"{element}_percentage"] = (sum(element_presence) / len(element_presence)) * 100
-        
-        metrics = {
-            # Composite scores
-            "overall_fable_score": overall_fable_score,
-            "avg_narrative_flow_score": MetricCalculator.mean(structure_scores),
-            "avg_moral_clarity_score": MetricCalculator.mean(moral_clarity_scores),
-            "avg_style_score": MetricCalculator.mean(style_scores),
+        for i, item in enumerate(test_data):
+            completion = item.get('generated_text', '')
             
-            # Structure statistics
-            **structure_element_stats,
-            
-            # Character and setting statistics
-            "avg_character_count": MetricCalculator.mean(character_counts),
-            "avg_setting_count": MetricCalculator.mean(setting_counts),
-            "std_character_count": MetricCalculator.std(character_counts),
-            "std_setting_count": MetricCalculator.std(setting_counts),
-            
-            # Distribution statistics
-            "structure_score_std": MetricCalculator.std(structure_scores),
-            "moral_clarity_std": MetricCalculator.std(moral_clarity_scores),
-            "style_score_std": MetricCalculator.std(style_scores),
-            
-            "num_samples": len(test_data)
-        }
+            if not completion or len(completion.split()) < 10:
+                self._log(f"Skipping sample {i} due to short/empty completion.")
+                continue
+
+            # Use zero-shot classification to evaluate structure
+            try:
+                result = self.classifier(completion, fable_labels, multi_label=True)
+                scores = {label: score for label, score in zip(result['labels'], result['scores'])}
+                
+                # Calculate scores for this sample
+                narrative_flow = scores.get('clear narrative', 0.0) - scores.get('confusing', 0.0)
+                moral_clarity = scores.get('moral of the story', 0.0) - scores.get('lacks a moral', 0.0)
+                
+                sample_results.append({
+                    'narrative_flow_score': max(0, narrative_flow),
+                    'moral_clarity_score': max(0, moral_clarity),
+                    'has_conflict': scores.get('has conflict', 0.0),
+                    'has_resolution': scores.get('has resolution', 0.0)
+                })
+                
+            except Exception as e:
+                self._log(f"Error classifying sample {i}: {e}", level="warning")
+                continue
+
+        if not sample_results:
+            self._log("No valid completions found to evaluate.", level="warning")
+            return EvaluationResult("fable_structure", {}, [])
+
+        # Aggregate metrics
+        metrics = self.aggregate_metrics(sample_results)
         
         return EvaluationResult(
-            evaluator_name="FableStructure",
+            evaluator_name="fable_structure",
             metrics=metrics,
-            samples=sample_results,
-            metadata={
-                "model_name": self.config.model_name,
-                "temperature": self.config.temperature,
-                "analysis_components": ["narrative_structure", "moral_clarity", "fable_style"],
-                "animal_vocabulary_size": len(self.animal_characters),
-                "setting_vocabulary_size": len(self.fable_settings)
-            }
-        ) 
+            samples=sample_results
+        )
+
+    def aggregate_metrics(self, sample_results: List[Dict[str, float]]) -> Dict[str, float]:
+        """Aggregate per-sample structure metrics."""
+        
+        if not sample_results:
+            return {}
+
+        avg_narrative_flow = np.mean([s['narrative_flow_score'] for s in sample_results])
+        avg_moral_clarity = np.mean([s['moral_clarity_score'] for s in sample_results])
+        
+        # Calculate percentages for binary-like attributes
+        conflict_percentage = np.mean([s['has_conflict'] > 0.6 for s in sample_results]) * 100
+        resolution_percentage = np.mean([s['has_resolution'] > 0.6 for s in sample_results]) * 100
+        
+        # Overall fable score
+        overall_score = (
+            (avg_narrative_flow * 0.5) +
+            (avg_moral_clarity * 0.5)
+        )
+        
+        return {
+            'overall_fable_score': overall_score,
+            'avg_narrative_flow_score': avg_narrative_flow,
+            'avg_moral_clarity_score': avg_moral_clarity,
+            'has_conflict_percentage': conflict_percentage,
+            'has_resolution_percentage': resolution_percentage
+        } 

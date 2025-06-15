@@ -3,16 +3,30 @@ Fluency evaluator for repetition, diversity, and coherence metrics
 """
 
 import re
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from collections import Counter, defaultdict
-from .base import BaseEvaluator, EvaluationResult, MetricCalculator
+import numpy as np
+from nltk.tokenize import word_tokenize
+from nltk.probability import FreqDist
+
+from .base import BaseEvaluator, EvaluationResult, EvaluationConfig
 
 
 class FluencyEvaluator(BaseEvaluator):
-    """Evaluator for fluency and diversity metrics"""
+    """Evaluator for text fluency and quality"""
     
-    def __init__(self, config=None):
+    def __init__(self, config: Optional[EvaluationConfig] = None):
         super().__init__(config)
+        
+        # Try to initialize LanguageTool for grammar checking
+        self.language_tool = None
+        try:
+            import language_tool_python
+            self.language_tool = language_tool_python.LanguageTool('en-US')
+            self._log("✓ LanguageTool initialized for grammar checking.")
+        except Exception as e:
+            self._log(f"⚠️  LanguageTool not available (Java required): {e}")
+            self._log("Grammar checking will be disabled. Install Java to enable grammar analysis.")
     
     def tokenize_for_analysis(self, text: str) -> List[str]:
         """Tokenize text for fluency analysis"""
@@ -107,9 +121,13 @@ class FluencyEvaluator(BaseEvaluator):
             }
         
         # Sentence length analysis
-        sentence_lengths = [len(self.tokenize_for_analysis(sent)) for sent in sentences]
-        avg_sentence_length = MetricCalculator.mean(sentence_lengths)
-        sentence_length_std = MetricCalculator.std(sentence_lengths)
+        sentence_lengths = [len(sent.split()) for sent in sentences if sent.strip()]
+        
+        if not sentence_lengths:
+            return {"avg_sentence_length": 0, "sentence_length_std": 0}
+        
+        avg_sentence_length = np.mean(sentence_lengths)
+        sentence_length_std = np.std(sentence_lengths)
         
         # Basic coherence heuristics
         coherence_score = 0.0
@@ -139,136 +157,164 @@ class FluencyEvaluator(BaseEvaluator):
     
     def calculate_lexical_sophistication(self, text: str) -> Dict[str, float]:
         """Calculate lexical sophistication metrics"""
-        tokens = self.tokenize_for_analysis(text)
+        words = self.tokenize_for_analysis(text)
         
-        if len(tokens) == 0:
-            return {
-                "avg_word_length": 0.0,
-                "long_word_ratio": 0.0,
-                "word_length_std": 0.0
-            }
+        if not words:
+            return {"avg_word_length": 0, "word_length_std": 0}
         
-        # Word length analysis
-        word_lengths = [len(word) for word in tokens]
-        avg_word_length = MetricCalculator.mean(word_lengths)
-        word_length_std = MetricCalculator.std(word_lengths)
+        word_lengths = [len(word) for word in words]
         
-        # Long words (6+ characters) ratio
-        long_words = sum(1 for word in tokens if len(word) >= 6)
-        long_word_ratio = long_words / len(tokens)
+        avg_word_length = np.mean(word_lengths)
+        word_length_std = np.std(word_lengths)
         
         return {
             "avg_word_length": avg_word_length,
-            "long_word_ratio": long_word_ratio,
             "word_length_std": word_length_std
         }
     
     def evaluate(self, model, tokenizer, test_data: List[Dict[str, Any]]) -> EvaluationResult:
-        """Evaluate fluency metrics"""
-        model.eval()
+        """
+        Evaluate fluency metrics for generated text.
+        Expects test_data to contain 'generated_text'.
+        """
         
-        # Generate completions
-        self._log("Generating completions for fluency analysis...")
-        generated_texts = []
         sample_results = []
         
-        for i, sample in enumerate(test_data):
-            # Log progress every 10 samples
-            if i % 10 == 0:
-                self.logger.log_evaluation_progress("fluency", i, len(test_data))
+        for i, item in enumerate(test_data):
+            completion = item.get('generated_text', '')
             
-            prompt = sample['prompt']
-            reference = sample.get('reference', '')
+            if not completion:
+                self._log(f"Skipping sample {i} due to empty completion.")
+                continue
+
+            # 1. Linguistic Acceptability (Grammar) - optional if LanguageTool available
+            grammar_score = self.calculate_grammar_score(completion)
             
-            # Generate completion
-            completion = self.generate_completion(model, tokenizer, prompt)
-            full_text = prompt + " " + completion
-            generated_texts.append(full_text)
+            # 2. Perplexity (using a pre-trained model for general fluency)
+            # This is a simplified approach. A dedicated LM would be better.
+            # We are not using one to avoid heavy dependencies for this specific metric.
             
-            # Calculate metrics for this sample
-            repetition_metrics = self.calculate_repetition_metrics(full_text)
-            diversity_metrics = self.calculate_diversity_metrics(full_text)
-            coherence_metrics = self.calculate_coherence_metrics(full_text)
-            lexical_metrics = self.calculate_lexical_sophistication(full_text)
+            # 3. Repetition
+            repetition_ratio = self.calculate_repetition_metrics(completion)['repetition_ratio']
             
-            # Combine metrics for logging
-            sample_metrics = {
-                **repetition_metrics,
-                **diversity_metrics,
-                **coherence_metrics,
-                **lexical_metrics
-            }
+            # 4. Type-Token Ratio (Lexical Diversity)
+            ttr = self.calculate_diversity_metrics(completion)['ttr']
             
-            # Log generation sample (show first few samples in detail)
-            if i < 5:  # Show detailed logs for first 5 samples
-                key_metrics = {
-                    'repetition': repetition_metrics.get('repetition_ratio', 0),
-                    'diversity': diversity_metrics.get('ttr', 0),
-                    'coherence': coherence_metrics.get('coherence_score', 0)
-                }
-                self.logger.log_generation_sample(
-                    sample_idx=i,
-                    prompt=prompt,
-                    generated=completion,
-                    reference=reference,
-                    metrics=key_metrics
-                )
+            # 5. Coherence (simplified)
+            coherence_score = self.calculate_coherence_metrics(completion)['coherence_score']
             
-            sample_result = {
-                "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt,
-                "generated_text": full_text[:300] + "..." if len(full_text) > 300 else full_text,
-                **sample_metrics
-            }
+            sample_results.append({
+                'grammar_score': grammar_score,
+                'repetition_ratio': repetition_ratio,
+                'ttr': ttr,
+                'coherence_score': coherence_score
+            })
             
-            if self.config.save_generations:
-                sample_result["full_generated_text"] = full_text
-            
-            sample_results.append(sample_result)
-        
-        # Calculate aggregate metrics
-        self._log("Calculating aggregate fluency metrics...")
-        
-        all_metrics = defaultdict(list)
-        for sample in sample_results:
-            for key, value in sample.items():
-                if isinstance(value, (int, float)) and key not in ["prompt", "generated_text", "full_generated_text"]:
-                    all_metrics[key].append(value)
-        
-        # Aggregate statistics
-        metrics = {}
-        for metric_name, values in all_metrics.items():
-            metrics[f"avg_{metric_name}"] = MetricCalculator.mean(values)
-            metrics[f"std_{metric_name}"] = MetricCalculator.std(values)
-            metrics[f"median_{metric_name}"] = MetricCalculator.percentile(values, 50)
-        
-        # Overall fluency score (composite metric)
-        fluency_components = [
-            1 - MetricCalculator.mean(all_metrics["repetition_ratio"]),  # Lower repetition is better
-            MetricCalculator.mean(all_metrics["ttr"]),  # Higher diversity is better
-            MetricCalculator.mean(all_metrics["coherence_score"]),  # Higher coherence is better
-            min(1.0, MetricCalculator.mean(all_metrics["avg_sentence_length"]) / 15)  # Reasonable length
-        ]
-        
-        overall_fluency = MetricCalculator.mean(fluency_components)
-        metrics["overall_fluency_score"] = overall_fluency
-        
-        # Text length statistics
-        text_lengths = [len(text.split()) for text in generated_texts]
-        metrics.update({
-            "avg_text_length": MetricCalculator.mean(text_lengths),
-            "std_text_length": MetricCalculator.std(text_lengths),
-            "min_text_length": min(text_lengths) if text_lengths else 0,
-            "max_text_length": max(text_lengths) if text_lengths else 0,
-            "num_samples": len(test_data)
-        })
+        if not sample_results:
+            self._log("No valid completions found to evaluate.", level="warning")
+            return EvaluationResult("fluency", {}, [])
+
+        # Aggregate metrics
+        metrics = self.aggregate_metrics(sample_results)
         
         return EvaluationResult(
-            evaluator_name="Fluency",
+            evaluator_name="fluency",
             metrics=metrics,
-            samples=sample_results,
-            metadata={
-                "model_name": self.config.model_name,
-                "temperature": self.config.temperature,
-                "analysis_type": "lexical_diversity_and_repetition"
-            }
-        ) 
+            samples=sample_results
+        )
+
+    def aggregate_metrics(self, sample_results: List[Dict[str, float]]) -> Dict[str, float]:
+        """Aggregate per-sample fluency metrics into summary statistics."""
+        
+        # Calculate averages for each metric
+        avg_grammar = np.mean([s['grammar_score'] for s in sample_results])
+        avg_repetition = np.mean([s['repetition_ratio'] for s in sample_results])
+        avg_ttr = np.mean([s['ttr'] for s in sample_results])
+        avg_coherence = np.mean([s['coherence_score'] for s in sample_results])
+        
+        # --- Calculate Overall Fluency Score ---
+        # Weights can be adjusted based on importance
+        # Repetition is a penalty, so it's subtracted
+        overall_score = (
+            (avg_grammar * 0.4) +
+            (avg_coherence * 0.4) +
+            (avg_ttr * 0.2) -
+            (avg_repetition * 0.5)  # Penalize repetition more heavily
+        )
+        # Clamp score between 0 and 1
+        overall_score = np.clip(overall_score, 0, 1)
+        
+        return {
+            'overall_fluency_score': overall_score,
+            'avg_grammar_score': avg_grammar,
+            'avg_repetition_ratio': avg_repetition,
+            'avg_ttr': avg_ttr,
+            'avg_coherence_score': avg_coherence
+        }
+        
+    def calculate_grammar_score(self, text: str) -> float:
+        """Calculate grammar score (1 - normalized error rate)."""
+        if not text:
+            return 0.0
+        
+        # If LanguageTool is not available, return a neutral score
+        if self.language_tool is None:
+            return 0.5  # Neutral score when grammar checking is unavailable
+        
+        try:
+            matches = self.language_tool.check(text)
+            num_errors = len(matches)
+            num_words = len(word_tokenize(text))
+            
+            # Normalize error rate and invert to get a score
+            error_rate = num_errors / num_words if num_words > 0 else 0
+            return max(0.0, 1.0 - error_rate * 2) # Penalize errors more harshly
+        except Exception as e:
+            self._log(f"Grammar checking failed: {e}", level="warning")
+            return 0.5  # Neutral score on error
+
+    def calculate_repetition(self, text: str) -> float:
+        """Calculate repetition ratio (1 - unique_words / total_words)."""
+        if not text:
+            return 0.0
+        
+        tokens = word_tokenize(text.lower())
+        if not tokens:
+            return 0.0
+        
+        fdist = FreqDist(tokens)
+        
+        # Higher ratio means more repetition
+        repetition_ratio = 1.0 - (len(fdist) / len(tokens))
+        return repetition_ratio
+
+    def calculate_ttr(self, text: str) -> float:
+        """Calculate Type-Token Ratio (TTR) for lexical diversity."""
+        if not text:
+            return 0.0
+            
+        tokens = word_tokenize(text.lower())
+        if not tokens:
+            return 0.0
+            
+        num_unique_tokens = len(set(tokens))
+        return num_unique_tokens / len(tokens)
+
+    def calculate_coherence(self, text: str) -> float:
+        """Calculate a simple coherence score based on sentence structure."""
+        if not text:
+            return 0.0
+        
+        # Simple heuristic: sentences should have reasonable length and structure
+        sentences = [s.strip() for s in text.split('.') if s.strip()]
+        if not sentences:
+            return 0.0
+        
+        # Check for reasonable sentence lengths (not too short or too long)
+        reasonable_sentences = 0
+        for sentence in sentences:
+            words = sentence.split()
+            if 3 <= len(words) <= 30:  # Reasonable sentence length
+                reasonable_sentences += 1
+        
+        return reasonable_sentences / len(sentences) if sentences else 0.0 

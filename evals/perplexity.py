@@ -4,8 +4,10 @@ Perplexity evaluator for language modeling quality assessment
 
 import torch
 import math
+import numpy as np
 from typing import Dict, List, Any
-from .base import BaseEvaluator, EvaluationResult, MetricCalculator
+from tqdm import tqdm
+from .base import BaseEvaluator, EvaluationResult
 
 
 class PerplexityEvaluator(BaseEvaluator):
@@ -79,7 +81,8 @@ class PerplexityEvaluator(BaseEvaluator):
                     "prompt": sample['prompt'][:100] + "..." if len(sample['prompt']) > 100 else sample['prompt'],
                     "perplexity": metrics["perplexity"],
                     "loss": metrics["loss"],
-                    "num_tokens": num_tokens
+                    "num_tokens": num_tokens,
+                    "bits_per_char": metrics["bits_per_char"]
                 }
                 
                 if self.config.save_generations:
@@ -95,17 +98,14 @@ class PerplexityEvaluator(BaseEvaluator):
                 continue
         
         # Calculate aggregate metrics
+        avg_perplexity = np.mean([s['perplexity'] for s in sample_results])
+        weighted_perplexity = np.exp(np.mean([s['loss'] for s in sample_results]))
+        avg_bpc = np.mean([s['bits_per_char'] for s in sample_results])
+
         metrics = {
-            "average_perplexity": MetricCalculator.mean(perplexities),
-            "median_perplexity": MetricCalculator.percentile(perplexities, 50),
-            "weighted_perplexity": math.exp(total_loss_weighted / total_tokens) if total_tokens > 0 else float('inf'),
-            "perplexity_std": MetricCalculator.std(perplexities),
-            "average_loss": MetricCalculator.mean(losses),
-            "average_bits_per_char": MetricCalculator.mean(bits_per_char_list),
-            "min_perplexity": min(perplexities) if perplexities else float('inf'),
-            "max_perplexity": max(perplexities) if perplexities else 0,
-            "total_tokens": total_tokens,
-            "num_samples": len(perplexities)
+            'average_perplexity': avg_perplexity,
+            'weighted_perplexity': weighted_perplexity,
+            'average_bits_per_char': avg_bpc
         }
         
         return EvaluationResult(

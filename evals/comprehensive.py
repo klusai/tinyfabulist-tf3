@@ -3,7 +3,8 @@ Comprehensive evaluator that combines all evaluation metrics
 """
 
 from typing import Dict, List, Any, Optional
-from .base import BaseEvaluator, EvaluationResult, EvaluationConfig, MetricCalculator
+import numpy as np
+from .base import BaseEvaluator, EvaluationResult, EvaluationConfig
 from .perplexity import PerplexityEvaluator
 from .text_quality import TextQualityEvaluator
 from .fluency import FluencyEvaluator
@@ -61,7 +62,7 @@ class ComprehensiveEvaluator(BaseEvaluator):
             bleu_score = quality_metrics.get('avg_bleu_4', 0.0)
             rouge_score = quality_metrics.get('avg_rougeL', 0.0)
             bert_score = quality_metrics.get('bert_f1', 0.0)
-            text_quality_score = MetricCalculator.mean([bleu_score, rouge_score, bert_score])
+            text_quality_score = np.mean([bleu_score, rouge_score, bert_score])
         
         # Extract fluency with heavy repetition penalty
         fluency_base_score = 0.0
@@ -303,40 +304,59 @@ class ComprehensiveEvaluator(BaseEvaluator):
         
         self._log(f"Running comprehensive evaluation with {len(self.enabled_evaluators)} evaluators...")
         
-        # Run individual evaluators
+        # --- Centralized Text Generation ---
+        # Generate completions once for all evaluators that need it.
+        # Perplexity is a special case as it evaluates prompts directly.
+        
+        evaluators_that_need_completions = [
+            name for name in self.enabled_evaluators if name != 'perplexity'
+        ]
+        
+        completions = []
+        if evaluators_that_need_completions:
+            self._log("Generating text completions for all relevant evaluators...")
+            completions = self._generate_completions(model, tokenizer, test_data)
+            self._log("✓ Completions generated.")
+        
+        # --- Run Individual Evaluators ---
         individual_results = {}
-        all_sample_results = []
         
         for evaluator_name in self.enabled_evaluators:
             self._log(f"Running {evaluator_name} evaluation...")
-            
             evaluator = self.evaluators[evaluator_name]
-            result = evaluator.evaluate(model, tokenizer, test_data)
+            
+            # Use completions if the evaluator needs them, otherwise use original test_data
+            if evaluator_name == 'perplexity':
+                result = evaluator.evaluate(model, tokenizer, test_data)
+            else:
+                result = evaluator.evaluate(model, tokenizer, completions)
+                
             individual_results[evaluator_name] = result
-            
-            # Collect sample results
-            if not all_sample_results:  # First evaluator
-                all_sample_results = [{"sample_id": i} for i in range(len(result.samples))]
-            
-            # Merge sample results
-            for i, sample in enumerate(result.samples):
-                if i < len(all_sample_results):
-                    # Add metrics from this evaluator to the sample
-                    evaluator_metrics = {f"{evaluator_name}_{k}": v for k, v in sample.items() 
-                                       if isinstance(v, (int, float, bool))}
-                    all_sample_results[i].update(evaluator_metrics)
         
+        # --- Aggregation and Reporting ---
+        
+        # Collect sample results for detailed reporting
+        all_sample_results = []
+        if completions:
+             # Use the generated completions as the base for sample-level results
+            all_sample_results = [
+                {
+                    "sample_id": i,
+                    "prompt": sample.get('fable', ''),
+                    "generated_text": sample.get('generated_text', '')
+                } for i, sample in enumerate(completions)
+            ]
+        
+        # Merge metrics from each evaluator's samples
+        for evaluator_name, result in individual_results.items():
+            for i, sample_metrics in enumerate(result.samples):
+                if i < len(all_sample_results):
+                    # Prefix keys to avoid collisions and add to the main sample result
+                    prefixed_metrics = {f"{evaluator_name}_{k}": v for k, v in sample_metrics.items()}
+                    all_sample_results[i].update(prefixed_metrics)
+
         # Calculate overall metrics
         overall_metrics = self.calculate_overall_score(individual_results)
-        
-        # Combine all metrics
-        combined_metrics = overall_metrics.copy()
-        
-        # Add summary statistics from individual evaluators
-        for evaluator_name, result in individual_results.items():
-            for metric_name, value in result.metrics.items():
-                combined_key = f"{evaluator_name}_{metric_name}"
-                combined_metrics[combined_key] = value
         
         # Create summary report
         summary_report = self.create_summary_report(individual_results, overall_metrics)
@@ -351,7 +371,7 @@ class ComprehensiveEvaluator(BaseEvaluator):
         
         return EvaluationResult(
             evaluator_name="Comprehensive",
-            metrics=combined_metrics,
+            metrics=overall_metrics,
             samples=all_sample_results[:10],  # Limit samples for output size
             metadata=metadata
         ) 

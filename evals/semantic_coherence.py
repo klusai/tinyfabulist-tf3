@@ -7,7 +7,12 @@ import re
 import statistics
 from typing import Dict, List, Any
 from collections import Counter
-from .base import BaseEvaluator, EvaluationResult, MetricCalculator
+from transformers import pipeline, AutoTokenizer, AutoModel
+import torch
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
+
+from .base import BaseEvaluator, EvaluationResult, EvaluationConfig
 
 
 class SemanticCoherenceEvaluator(BaseEvaluator):
@@ -221,129 +226,81 @@ class SemanticCoherenceEvaluator(BaseEvaluator):
         return (connecting_score * 0.4 + subject_score * 0.6)
     
     def evaluate(self, model, tokenizer, test_data: List[Dict[str, Any]]) -> EvaluationResult:
-        """Evaluate semantic coherence metrics"""
-        model.eval()
+        """
+        Evaluate semantic coherence, topic consistency, and content appropriateness.
+        Expects test_data to contain 'fable' (prompt) and 'generated_text'.
+        """
         
-        self._log("Generating completions for semantic coherence analysis...")
         sample_results = []
+
+        # Labels for content appropriateness
+        appropriateness_labels = ['appropriate', 'inappropriate', 'toxic', 'safe']
         
-        # Metrics tracking
-        topic_scores = []
-        flow_scores = []
-        appropriateness_scores = []
-        fable_relevance_scores = []
-        flagged_samples = []
+        # Labels for fable relevance
+        relevance_labels = ['relevant to fables', 'off-topic', 'fantasy story', 'news article']
         
-        for i, sample in enumerate(test_data):
-            if i % 10 == 0:
-                self.logger.log_evaluation_progress("semantic_coherence", i, len(test_data))
+        for i, item in enumerate(test_data):
+            prompt = item.get('prompt', '')
+            completion = item.get('generated_text', '')
+
+            if not completion or len(completion.split()) < 5:
+                continue
+
+            # 1. Topic Consistency
+            topic_consistency = self.evaluate_topic_consistency(prompt, completion)
             
-            prompt = sample['prompt']
-            reference = sample.get('reference', '')
+            # 2. Content Appropriateness
+            appropriateness_result = self.evaluate_content_appropriateness(completion)
+            appropriateness_score = appropriateness_result['appropriateness_score']
             
-            # Generate completion
-            completion = self.generate_completion(model, tokenizer, prompt)
-            full_text = prompt + " " + completion
+            # 3. Fable Relevance
+            fable_relevance = self.evaluate_fable_relevance(completion)
             
-            # Evaluate semantic aspects
-            topic_score = self.evaluate_topic_consistency(prompt, completion)
-            flow_score = self.evaluate_logical_flow(full_text)
-            appropriateness_result = self.evaluate_content_appropriateness(full_text)
-            fable_score = self.evaluate_fable_relevance(full_text)
+            sample_results.append({
+                'topic_consistency': topic_consistency,
+                'appropriateness': appropriateness_score,
+                'fable_relevance': fable_relevance
+            })
+
+        if not sample_results:
+            self._log("No valid completions to evaluate.", level="warning")
+            return EvaluationResult("semantic_coherence", {}, [])
             
-            # Track metrics
-            topic_scores.append(topic_score)
-            flow_scores.append(flow_score)
-            appropriateness_scores.append(appropriateness_result['appropriateness_score'])
-            fable_relevance_scores.append(fable_score)
-            
-            if appropriateness_result['flagged_categories']:
-                flagged_samples.append({
-                    'sample_id': i,
-                    'flagged_categories': appropriateness_result['flagged_categories']
-                })
-            
-            # Combine scores for overall semantic coherence
-            semantic_coherence = (
-                topic_score * 0.25 +
-                flow_score * 0.35 +
-                appropriateness_result['appropriateness_score'] * 0.2 +
-                fable_score * 0.2
-            )
-            
-            # Log sample if showing detailed logs
-            if i < 5:
-                sample_metrics = {
-                    'topic_consistency': topic_score,
-                    'logical_flow': flow_score,
-                    'appropriateness': appropriateness_result['appropriateness_score'],
-                    'fable_relevance': fable_score,
-                    'semantic_coherence': semantic_coherence
-                }
-                self.logger.log_generation_sample(
-                    sample_idx=i,
-                    prompt=prompt,
-                    generated=completion,
-                    reference=reference,
-                    metrics=sample_metrics
-                )
-            
-            sample_result = {
-                "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt,
-                "generated_text": full_text[:300] + "..." if len(full_text) > 300 else full_text,
-                "topic_consistency": topic_score,
-                "logical_flow": flow_score,
-                "appropriateness": appropriateness_result['appropriateness_score'],
-                "fable_relevance": fable_score,
-                "semantic_coherence": semantic_coherence,
-                "is_appropriate": appropriateness_result['is_appropriate']
-            }
-            
-            if self.config.save_generations:
-                sample_result["full_generated_text"] = full_text
-                sample_result["flagged_content"] = appropriateness_result['flagged_categories']
-            
-            sample_results.append(sample_result)
-        
-        # Calculate aggregate metrics
-        self._log("Calculating semantic coherence metrics...")
-        
-        metrics = {
-            # Individual component scores
-            "avg_topic_consistency": MetricCalculator.mean(topic_scores),
-            "std_topic_consistency": MetricCalculator.std(topic_scores),
-            "avg_logical_flow": MetricCalculator.mean(flow_scores),
-            "std_logical_flow": MetricCalculator.std(flow_scores),
-            "avg_appropriateness": MetricCalculator.mean(appropriateness_scores),
-            "std_appropriateness": MetricCalculator.std(appropriateness_scores),
-            "avg_fable_relevance": MetricCalculator.mean(fable_relevance_scores),
-            "std_fable_relevance": MetricCalculator.std(fable_relevance_scores),
-            
-            # Overall semantic coherence
-            "overall_semantic_coherence": MetricCalculator.mean([
-                sample["semantic_coherence"] for sample in sample_results
-            ]),
-            
-            # Content quality metrics
-            "inappropriate_content_rate": len(flagged_samples) / len(test_data),
-            "appropriate_samples": sum(1 for sample in sample_results if sample["is_appropriate"]),
-            "appropriate_sample_rate": sum(1 for sample in sample_results if sample["is_appropriate"]) / len(test_data),
-            
-            # Quality thresholds
-            "high_quality_samples": sum(1 for sample in sample_results if sample["semantic_coherence"] > 0.7),
-            "low_quality_samples": sum(1 for sample in sample_results if sample["semantic_coherence"] < 0.3),
-            
-            "num_samples": len(test_data)
-        }
+        # Aggregate metrics
+        metrics = self.aggregate_metrics(sample_results)
         
         return EvaluationResult(
-            evaluator_name="SemanticCoherence",
+            evaluator_name="semantic_coherence",
             metrics=metrics,
-            samples=sample_results,
-            metadata={
-                "model_name": self.config.model_name,
-                "temperature": self.config.temperature,
-                "flagged_samples": flagged_samples,
-                "analysis_type": "semantic_coherence_and_appropriateness"
-            }
-        ) 
+            samples=sample_results
+        )
+
+    def aggregate_metrics(self, sample_results: List[Dict[str, float]]) -> Dict[str, float]:
+        """Aggregate semantic coherence metrics."""
+        
+        if not sample_results:
+            return {}
+
+        avg_topic_consistency = np.mean([s['topic_consistency'] for s in sample_results])
+        avg_appropriateness = np.mean([s['appropriateness'] for s in sample_results])
+        avg_fable_relevance = np.mean([s['fable_relevance'] for s in sample_results])
+        
+        # Rate of appropriate samples
+        appropriate_rate = np.mean([s['appropriateness'] > 0.7 for s in sample_results])
+        
+        # Overall semantic score
+        overall_score = (
+            (avg_topic_consistency * 0.4) +
+            (avg_appropriateness * 0.4) +
+            (avg_fable_relevance * 0.2)
+        )
+        
+        return {
+            'overall_semantic_coherence': overall_score,
+            'avg_topic_consistency': avg_topic_consistency,
+            'avg_appropriateness': avg_appropriateness,
+            'avg_fable_relevance': avg_fable_relevance,
+            'appropriate_sample_rate': appropriate_rate
+        }
+
+ 

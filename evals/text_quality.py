@@ -5,17 +5,29 @@ Text quality evaluator with BLEU, ROUGE, and semantic similarity metrics
 import re
 from typing import Dict, List, Any, Optional
 from collections import Counter
-from .base import BaseEvaluator, EvaluationResult, MetricCalculator
+from .base import BaseEvaluator, EvaluationResult, EvaluationConfig
+import numpy as np
+import evaluate
 
 
 class TextQualityEvaluator(BaseEvaluator):
     """Evaluator for text quality metrics (BLEU, ROUGE, BERTScore)"""
     
-    def __init__(self, config=None):
+    def __init__(self, config: Optional[EvaluationConfig] = None):
         super().__init__(config)
         self._nltk_downloaded = False
         self._rouge_scorer = None
         self._bert_scorer = None
+        self.bleu = None
+        self.rouge = None
+        self.bertscore = None
+        
+        self._log("Initializing TextQualityEvaluator and loading metrics...")
+        # Load metrics using the evaluate library
+        self.bleu = evaluate.load("bleu")
+        self.rouge = evaluate.load("rouge")
+        self.bertscore = evaluate.load("bertscore")
+        self._log("✓ Metrics loaded.")
         
     def _ensure_nltk(self):
         """Ensure NLTK dependencies are downloaded"""
@@ -137,106 +149,81 @@ class TextQualityEvaluator(BaseEvaluator):
             return {"bert_precision": 0.0, "bert_recall": 0.0, "bert_f1": 0.0}
     
     def evaluate(self, model, tokenizer, test_data: List[Dict[str, Any]]) -> EvaluationResult:
-        """Evaluate text quality metrics"""
-        model.eval()
+        """
+        Evaluate text quality metrics (BLEU, ROUGE, BERTScore).
+        Expects test_data to contain 'fable' (reference) and 'generated_text' (candidate).
+        """
         
-        # Generate completions
-        self._log("Generating completions...")
-        generated_completions = []
-        references = []
         sample_results = []
         
-        for i, sample in enumerate(test_data):
-            if i % 20 == 0:
-                self._log(f"Generating completion {i+1}/{len(test_data)}")
-            
-            prompt = sample['prompt']
-            reference = sample['reference']
-            
-            # Generate completion
-            completion = self.generate_completion(model, tokenizer, prompt)
-            full_generated = prompt + " " + completion
-            
-            generated_completions.append(completion)
+        # Prepare lists for batch processing
+        references = []
+        candidates = []
+
+        for i, item in enumerate(test_data):
+            reference = item.get('reference', '')
+            completion = item.get('generated_text', '')
+
+            if not completion:
+                self._log(f"Skipping sample {i} due to empty completion.")
+                continue
+
+            if not reference:
+                self._log(f"Skipping sample {i} due to empty reference.")
+                continue
+
+            # For quality metrics, the "reference" is the ground truth completion,
+            # and the "candidate" is the generated completion.
             references.append(reference)
-            
-            # Calculate per-sample metrics
-            bleu_scores = self.calculate_bleu_score(reference, completion)
-            rouge_scores = self.calculate_rouge_scores(reference, completion)
-            
-            sample_result = {
-                "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt,
-                "generated_completion": completion[:200] + "..." if len(completion) > 200 else completion,
-                "reference": reference[:200] + "..." if len(reference) > 200 else reference,
-                **bleu_scores,
-                **rouge_scores
-            }
-            
-            if self.config.save_generations:
-                sample_result.update({
-                    "full_generated": full_generated,
-                    "full_reference": sample['full_text']
-                })
-            
-            sample_results.append(sample_result)
+            candidates.append(completion)
+
+            sample_results.append({
+                "reference": reference,
+                "completion": completion,
+                "completion_length": len(completion.split())
+            })
+
+        if not candidates:
+            self._log("No valid completions found to evaluate.", level="warning")
+            return EvaluationResult("TextQuality", {}, [])
+
+        # --- Batch Metric Calculation ---
+        self._log(f"Calculating metrics for {len(candidates)} samples...")
+
+        # ROUGE scores
+        rouge_scores = self.rouge.compute(predictions=candidates, references=references)
         
-        # Calculate aggregate BLEU and ROUGE scores
-        self._log("Calculating aggregate scores...")
+        # BLEU scores (use string format for evaluate library)
+        bleu_score = self.bleu.compute(predictions=candidates, references=[[ref] for ref in references])
         
-        all_bleu_scores = {f"bleu_{n}": [] for n in range(1, 5)}
-        all_rouge_scores = {"rouge1": [], "rouge2": [], "rougeL": []}
+        # BERTScore
+        bert_results = self.bertscore.compute(predictions=candidates, references=references, lang="en")
         
-        for sample in sample_results:
-            for n in range(1, 5):
-                all_bleu_scores[f"bleu_{n}"].append(sample[f"bleu_{n}"])
-            
-            all_rouge_scores["rouge1"].append(sample["rouge1"])
-            all_rouge_scores["rouge2"].append(sample["rouge2"])
-            all_rouge_scores["rougeL"].append(sample["rougeL"])
+        # --- Aggregation ---
+        avg_rouge_l = np.mean(rouge_scores['rougeL'])
+        avg_bleu = bleu_score['bleu']
+        avg_bert_f1 = np.mean(bert_results['f1'])
         
-        # Calculate BERTScore (batch operation)
-        bert_scores = self.calculate_bert_scores(references, generated_completions)
-        
-        # Aggregate metrics
-        metrics = {}
-        
-        # BLEU metrics
-        for n in range(1, 5):
-            scores = all_bleu_scores[f"bleu_{n}"]
-            metrics[f"avg_bleu_{n}"] = MetricCalculator.mean(scores)
-            metrics[f"std_bleu_{n}"] = MetricCalculator.std(scores)
-        
-        # ROUGE metrics
-        for rouge_type in ["rouge1", "rouge2", "rougeL"]:
-            scores = all_rouge_scores[rouge_type]
-            metrics[f"avg_{rouge_type}"] = MetricCalculator.mean(scores)
-            metrics[f"std_{rouge_type}"] = MetricCalculator.std(scores)
-        
-        # BERTScore metrics
-        metrics.update(bert_scores)
-        
-        # Additional quality metrics
-        completion_lengths = [len(comp.split()) for comp in generated_completions]
-        reference_lengths = [len(ref.split()) for ref in references]
-        
-        metrics.update({
-            "avg_completion_length": MetricCalculator.mean(completion_lengths),
-            "avg_reference_length": MetricCalculator.mean(reference_lengths),
-            "length_ratio": MetricCalculator.safe_divide(
-                MetricCalculator.mean(completion_lengths),
-                MetricCalculator.mean(reference_lengths),
-                1.0
-            ),
-            "num_samples": len(test_data)
-        })
-        
+        for i in range(len(sample_results)):
+            if i < len(bert_results['f1']):
+                # BLEU score is a single value for the entire batch
+                sample_results[i]['bleu_4'] = bleu_score['bleu']
+                # ROUGE scores - check if they're lists or single values
+                if isinstance(rouge_scores['rougeL'], list):
+                    sample_results[i]['rougeL'] = rouge_scores['rougeL'][i] if i < len(rouge_scores['rougeL']) else 0.0
+                else:
+                    sample_results[i]['rougeL'] = rouge_scores['rougeL']
+                sample_results[i]['bert_f1'] = bert_results['f1'][i]
+
+        metrics = {
+            'avg_bleu_4': avg_bleu,
+            'avg_rougeL': avg_rouge_l,
+            'bert_f1': avg_bert_f1,
+            'avg_completion_length': np.mean([s['completion_length'] for s in sample_results])
+        }
+
         return EvaluationResult(
-            evaluator_name="TextQuality",
+            evaluator_name="text_quality",
             metrics=metrics,
-            samples=sample_results,
-            metadata={
-                "model_name": self.config.model_name,
-                "temperature": self.config.temperature,
-                "max_new_tokens": 150  # Default from base class
-            }
+            samples=sample_results
         ) 

@@ -26,8 +26,6 @@ from lib import (
     setup_model_for_device,
     ModelLoader,
     ModelCache,
-    DatasetLoader,
-    create_fable_test_data,
     optimize_for_apple_silicon,
     setup_logging,
     get_logger,
@@ -96,22 +94,14 @@ def load_model_and_tokenizer(model_name: str, device: str = None):
         sys.exit(1)
 
 
-def load_dataset_with_fallback(dataset_name: str, split: str = "test", verbose: bool = True, max_samples: Optional[int] = None):
-    """Load dataset with fallback strategies using DatasetLoader
-    
-    Returns:
-        tuple: (dataset, actual_dataset_name, actual_split)
-    """
+def load_huggingface_dataset(dataset_name: str, split: str, verbose: bool = True, max_samples: Optional[int] = None) -> Dataset:
+    """Load a dataset from Hugging Face with compatibility transformations."""
     logger = get_logger()
-    
-    # Use the new DatasetLoader from lib
-    loader = DatasetLoader(verbose=verbose)
-    
+
     try:
-        logger.info("📊 Loading dataset with fallbacks", dataset=dataset_name, split=split, max_samples=max_samples)
+        logger.info("📊 Loading dataset from Hugging Face", dataset=dataset_name, split=split, max_samples=max_samples)
         
-        # Try to load the real dataset first
-        from datasets import load_dataset
+        # Load the dataset from Hugging Face
         dataset = load_dataset(dataset_name, split=split)
         
         # Limit samples if requested
@@ -128,26 +118,12 @@ def load_dataset_with_fallback(dataset_name: str, split: str = "test", verbose: 
             logger.info("✓ Transformed 'text' field to 'fable' for compatibility")
         
         logger.log_dataset_info(dataset_name, split, len(dataset), columns=list(dataset.column_names))
-        return dataset, dataset_name, split
+        return dataset
         
     except Exception as e:
-        logger.log_error_context(e, "Dataset loading failed completely", dataset=dataset_name, split=split)
-        logger.warning("Creating synthetic test dataset as fallback")
-        
-        # Create synthetic dataset as final fallback
-        test_data = create_fable_test_data(max_samples or 100)
-        # Convert to dataset format expected by evaluators
-        fable_data = [{"fable": item["full_text"], "text": item["full_text"]} for item in test_data]
-        synthetic_dataset = Dataset.from_list(fable_data)
-        
-        actual_dataset_name = "synthetic_fables"
-        actual_split = "generated"
-        
-        logger.warning(f"📊 Using synthetic dataset due to {dataset_name} failure")
-        logger.log_dataset_info(actual_dataset_name, actual_split, len(synthetic_dataset), 
-                               type="fallback", original_requested=f"{dataset_name}:{split}", 
-                               columns=list(synthetic_dataset.column_names))
-        return synthetic_dataset, actual_dataset_name, actual_split
+        logger.log_error_context(e, "Fatal: Dataset loading failed", dataset=dataset_name, split=split)
+        logger.error(f"Could not load dataset '{dataset_name}'. Please check the dataset name and your connection.")
+        sys.exit(1)
 
 
 def create_config_from_args(args) -> EvaluationConfig:
@@ -185,12 +161,13 @@ def run_single_evaluator(args):
     actual_device = next(model.parameters()).device.type
     config.device = actual_device
     
-    # Load dataset with fallback handling
-    dataset, actual_dataset_name, actual_split = load_dataset_with_fallback(args.dataset, args.split, verbose=not args.quiet, max_samples=args.num_samples * 2)
-    
-    # Update config with actual dataset information
-    config.dataset_name = actual_dataset_name
-    config.dataset_split = actual_split
+    # Load dataset
+    dataset = load_huggingface_dataset(
+        args.dataset,
+        args.split,
+        verbose=not args.quiet,
+        max_samples=args.num_samples * 2
+    )
     
     # Get evaluator
     try:
@@ -230,12 +207,13 @@ def run_comprehensive_evaluation(args):
     actual_device = next(model.parameters()).device.type
     config.device = actual_device
     
-    # Load dataset with fallback handling
-    dataset, actual_dataset_name, actual_split = load_dataset_with_fallback(args.dataset, args.split, verbose=not args.quiet, max_samples=args.num_samples * 2)
-    
-    # Update config with actual dataset information
-    config.dataset_name = actual_dataset_name
-    config.dataset_split = actual_split
+    # Load dataset
+    dataset = load_huggingface_dataset(
+        args.dataset,
+        args.split,
+        verbose=not args.quiet,
+        max_samples=args.num_samples * 2
+    )
     
     # Create comprehensive evaluator
     evaluator = ComprehensiveEvaluator(config=config)
@@ -356,8 +334,8 @@ Available evaluators: perplexity, text_quality, fluency, fable_structure, compre
                           help="Model name or path to evaluate (default: gpt2)")
         parser.add_argument("--dataset", default="klusai/ds-tf1-en-3m",
                           help="Dataset to evaluate on (default: klusai/ds-tf1-en-3m)")
-        parser.add_argument("--split", default="test",
-                          help="Dataset split to use (default: test)")
+        parser.add_argument("--split", default="Test",
+                          help="Dataset split to use (default: Test)")
         parser.add_argument("--num-samples", type=int, default=100,
                           help="Number of samples to evaluate (default: 100)")
         parser.add_argument("--max-length", type=int, default=512,

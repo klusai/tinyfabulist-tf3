@@ -148,8 +148,7 @@ def create_config_from_args(args) -> EvaluationConfig:
     if hasattr(args, 'max_new_tokens') and args.max_new_tokens is not None:
         config_kwargs['max_new_tokens'] = args.max_new_tokens
     
-    if hasattr(args, 'prompt_split_ratio') and args.prompt_split_ratio is not None:
-        config_kwargs['prompt_split_ratio'] = args.prompt_split_ratio
+    # Removed prompt_split_ratio - now uses principled sentence boundary detection
     
     if hasattr(args, 'num_runs') and args.num_runs is not None:
         config_kwargs['num_evaluation_runs'] = args.num_runs
@@ -160,8 +159,7 @@ def create_config_from_args(args) -> EvaluationConfig:
     if hasattr(args, 'length_normalize') and args.length_normalize is not None:
         config_kwargs['length_normalize_metrics'] = args.length_normalize
     
-    if hasattr(args, 'truncation_strategy') and args.truncation_strategy is not None:
-        config_kwargs['prompt_truncation_strategy'] = args.truncation_strategy
+    # Removed truncation_strategy - now uses principled splitting methods
     
     # Only set device if explicitly specified, otherwise let default_factory handle it
     if args.device is not None:
@@ -309,7 +307,7 @@ def run_comprehensive_evaluation(args):
 
 
 def compare_models(args):
-    """Compare multiple models"""
+    """Compare multiple models using interpretable metrics"""
     
     if len(args.models) < 2:
         print("Error: At least 2 models required for comparison")
@@ -326,39 +324,160 @@ def compare_models(args):
         args.model = model_name
         
         # Run evaluation
-        result = run_comprehensive_evaluation(args)
+        evaluation_result = run_comprehensive_evaluation(args)
+        
+        # Handle both single results and statistical results
+        if isinstance(evaluation_result, dict) and 'single_result' in evaluation_result:
+            # Statistical evaluation with single result
+            result = evaluation_result['single_result']
+        elif isinstance(evaluation_result, dict) and 'all_results' in evaluation_result:
+            # Statistical evaluation with multiple results - use the first one for comparison
+            result = evaluation_result['all_results'][0]
+        else:
+            # Single evaluation result
+            result = evaluation_result
+            
         results[model_name] = result
     
-    # Create comparison report
+    # Create comparison report with interpretable metrics
     print(f"\n{'='*80}")
-    print("MODEL COMPARISON SUMMARY")
+    print("MODEL COMPARISON - INTERPRETABLE METRICS")
     print(f"{'='*80}")
     
-    comparison_lines = [
-        f"{'Model':<30} {'Overall':<10} {'Perplexity':<12} {'BLEU-4':<10} {'Fluency':<10} {'Structure':<10}"
+    # Language modeling comparison
+    print("\nLANGUAGE MODELING")
+    print("-" * 50)
+    lang_lines = [
+        f"{'Model':<25} {'Raw Perplexity':<15} {'Log Perplexity':<15} {'Bits/Char':<10}"
     ]
-    comparison_lines.append("-" * 90)
+    lang_lines.append("-" * 70)
     
     for model_name, result in results.items():
         metrics = result.metrics
+        raw_perp = metrics.get('raw_perplexity', 'N/A')
+        log_perp = metrics.get('log_perplexity', 'N/A')
+        bits_char = metrics.get('bits_per_char', 'N/A')
         
-        overall = metrics.get('overall_score', 0.0)
-        perplexity = metrics.get('perplexity_weighted_perplexity', 0.0)
-        bleu4 = metrics.get('text_quality_avg_bleu_4', 0.0)
-        fluency = metrics.get('fluency_overall_fluency_score', 0.0)
-        structure = metrics.get('fable_structure_overall_fable_score', 0.0)
+        # Format values
+        raw_perp_str = f"{raw_perp:.2f}" if isinstance(raw_perp, (int, float)) else str(raw_perp)
+        log_perp_str = f"{log_perp:.3f}" if isinstance(log_perp, (int, float)) else str(log_perp)
+        bits_char_str = f"{bits_char:.3f}" if isinstance(bits_char, (int, float)) else str(bits_char)
         
-        comparison_lines.append(
-            f"{model_name:<30} {overall:<10.3f} {perplexity:<12.2f} {bleu4:<10.3f} {fluency:<10.3f} {structure:<10.3f}"
+        lang_lines.append(
+            f"{model_name:<25} {raw_perp_str:<15} {log_perp_str:<15} {bits_char_str:<10}"
         )
     
-    print("\n".join(comparison_lines))
+    print("\n".join(lang_lines))
+    
+    # Semantic similarity comparison
+    print("\nSEMANTIC SIMILARITY (BERTScore)")
+    print("-" * 50)
+    semantic_lines = [
+        f"{'Model':<25} {'F1':<8} {'Precision':<10} {'Recall':<8} {'Vocab Div':<10}"
+    ]
+    semantic_lines.append("-" * 65)
+    
+    for model_name, result in results.items():
+        metrics = result.metrics
+        bert_f1 = metrics.get('bert_f1', 0.0)
+        bert_prec = metrics.get('bert_precision', 0.0)
+        bert_rec = metrics.get('bert_recall', 0.0)
+        vocab_div = metrics.get('vocab_diversity', 0.0)
+        
+        semantic_lines.append(
+            f"{model_name:<25} {bert_f1:<8.3f} {bert_prec:<10.3f} {bert_rec:<8.3f} {vocab_div:<10.3f}"
+        )
+    
+    print("\n".join(semantic_lines))
+    
+    # Fluency and repetition comparison
+    print("\nFLUENCY & REPETITION")
+    print("-" * 50)
+    fluency_lines = [
+        f"{'Model':<25} {'Repetition':<12} {'TTR':<8} {'Coherence':<10} {'High Rep?':<10}"
+    ]
+    fluency_lines.append("-" * 70)
+    
+    for model_name, result in results.items():
+        metrics = result.metrics
+        rep_ratio = metrics.get('repetition_ratio', 0.0)
+        ttr = metrics.get('type_token_ratio', 0.0)
+        coherence = metrics.get('coherence_score', 0.0)
+        high_rep = metrics.get('high_repetition_flag', False)
+        
+        fluency_lines.append(
+            f"{model_name:<25} {rep_ratio:<12.3f} {ttr:<8.3f} {coherence:<10.3f} {'Yes' if high_rep else 'No':<10}"
+        )
+    
+    print("\n".join(fluency_lines))
+    
+    # Quality assessment comparison
+    print("\nQUALITY ASSESSMENT")
+    print("-" * 50)
+    quality_lines = [
+        f"{'Model':<25} {'Category':<15} {'Issues':<8} {'Semantic Coh':<12} {'Appropriate':<12}"
+    ]
+    quality_lines.append("-" * 75)
+    
+    for model_name, result in results.items():
+        metrics = result.metrics
+        category = metrics.get('quality_category', 'unknown').title()
+        num_issues = metrics.get('num_quality_issues', 0)
+        semantic_coh = metrics.get('semantic_coherence', 0.0)
+        appropriate = metrics.get('appropriate_sample_rate', 1.0)
+        
+        quality_lines.append(
+            f"{model_name:<25} {category:<15} {num_issues:<8} {semantic_coh:<12.3f} {appropriate:<12.3f}"
+        )
+    
+    print("\n".join(quality_lines))
+    
+    # Quality flags summary
+    print("\nQUALITY FLAGS SUMMARY")
+    print("-" * 50)
+    for model_name, result in results.items():
+        metrics = result.metrics
+        flags = metrics.get('quality_flags', [])
+        if flags:
+            flag_str = ", ".join([f.replace('_', ' ').title() for f in flags])
+            print(f"{model_name:<25} {flag_str}")
+        else:
+            print(f"{model_name:<25} No major issues")
     
     # Save comparison
     if args.output_dir:
         comparison_file = os.path.join(args.output_dir, "model_comparison.txt")
         with open(comparison_file, 'w') as f:
-            f.write("\n".join(comparison_lines))
+            f.write("MODEL COMPARISON - INTERPRETABLE METRICS\n")
+            f.write("=" * 80 + "\n\n")
+            
+            f.write("LANGUAGE MODELING\n")
+            f.write("-" * 50 + "\n")
+            f.write("\n".join(lang_lines) + "\n\n")
+            
+            f.write("SEMANTIC SIMILARITY (BERTScore)\n")
+            f.write("-" * 50 + "\n")
+            f.write("\n".join(semantic_lines) + "\n\n")
+            
+            f.write("FLUENCY & REPETITION\n")
+            f.write("-" * 50 + "\n")
+            f.write("\n".join(fluency_lines) + "\n\n")
+            
+            f.write("QUALITY ASSESSMENT\n")
+            f.write("-" * 50 + "\n")
+            f.write("\n".join(quality_lines) + "\n\n")
+            
+            f.write("QUALITY FLAGS SUMMARY\n")
+            f.write("-" * 50 + "\n")
+            for model_name, result in results.items():
+                metrics = result.metrics
+                flags = metrics.get('quality_flags', [])
+                if flags:
+                    flag_str = ", ".join([f.replace('_', ' ').title() for f in flags])
+                    f.write(f"{model_name:<25} {flag_str}\n")
+                else:
+                    f.write(f"{model_name:<25} No major issues\n")
+        
         print(f"\nComparison saved to: {comparison_file}")
 
 
@@ -418,10 +537,7 @@ Available evaluators: perplexity, text_quality, fluency, fable_structure, compre
                           help="Maximum tokens in prompt (default: 256)")
         parser.add_argument("--max-new-tokens", type=int, default=256,
                           help="Maximum new tokens to generate (default: 256)")
-        parser.add_argument("--prompt-split-ratio", type=float, default=0.6,
-                          help="Ratio of text to use as prompt vs reference (default: 0.6)")
-        parser.add_argument("--truncation-strategy", choices=["left", "right", "middle"], default="right",
-                          help="How to truncate long prompts (default: right)")
+        # Removed --prompt-split-ratio - now uses principled sentence boundary detection
         parser.add_argument("--num-runs", type=int, default=1,
                           help="Number of evaluation runs for statistical analysis (default: 1)")
         parser.add_argument("--confidence-level", type=float, default=0.95,

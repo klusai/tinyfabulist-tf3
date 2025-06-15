@@ -46,121 +46,102 @@ class ComprehensiveEvaluator(BaseEvaluator):
             self.enabled_evaluators = list(self.evaluators.keys())
     
     def calculate_overall_score(self, individual_results: Dict[str, EvaluationResult]) -> Dict[str, float]:
-        """Calculate realistic overall performance scores with proper weighting"""
+        """
+        Calculate interpretable individual metrics without arbitrary composite scoring.
+        Reports metrics separately for transparency and research validity.
+        """
         
-        # Extract key metrics with defaults
-        perplexity_score = 0.0
+        # Extract individual metrics without arbitrary weighting
+        metrics = {}
+        
+        # Language modeling capability (perplexity-based)
         if 'perplexity' in individual_results:
-            perp = individual_results['perplexity'].metrics.get('weighted_perplexity', float('inf'))
-            # Normalize perplexity: good = ~10-20, bad = >50
-            if perp != float('inf') and perp > 0:
-                perplexity_score = max(0.0, min(1.0, (50.0 - perp) / 40.0))
+            perplexity_metrics = individual_results['perplexity'].metrics
+            raw_perplexity = perplexity_metrics.get('average_perplexity', float('inf'))
+            metrics['raw_perplexity'] = raw_perplexity
+            metrics['bits_per_char'] = perplexity_metrics.get('average_bits_per_char', 0.0)
+            
+            # Log-scale normalization for interpretability (not arbitrary thresholds)
+            if raw_perplexity > 0:
+                metrics['log_perplexity'] = np.log(raw_perplexity)
+            else:
+                metrics['log_perplexity'] = float('inf')
         
-        text_quality_score = 0.0
+        # Semantic similarity (BERTScore only - no BLEU/ROUGE)
         if 'text_quality' in individual_results:
             quality_metrics = individual_results['text_quality'].metrics
-            bleu_score = quality_metrics.get('avg_bleu_4', 0.0)
-            rouge_score = quality_metrics.get('avg_rougeL', 0.0)
-            bert_score = quality_metrics.get('bert_f1', 0.0)
-            text_quality_score = np.mean([bleu_score, rouge_score, bert_score])
+            metrics['bert_f1'] = quality_metrics.get('bert_f1', 0.0)
+            metrics['bert_precision'] = quality_metrics.get('bert_precision', 0.0)
+            metrics['bert_recall'] = quality_metrics.get('bert_recall', 0.0)
+            metrics['vocab_diversity'] = quality_metrics.get('vocab_diversity', 0.0)
+            metrics['length_ratio'] = quality_metrics.get('length_ratio', 0.0)
         
-        # Extract fluency with heavy repetition penalty
-        fluency_base_score = 0.0
-        repetition_ratio = 0.0
+        # Fluency metrics (interpretable)
         if 'fluency' in individual_results:
             fluency_metrics = individual_results['fluency'].metrics
-            fluency_base_score = fluency_metrics.get('overall_fluency_score', 0.0)
-            repetition_ratio = fluency_metrics.get('avg_repetition_ratio', 0.0)
+            metrics['repetition_ratio'] = fluency_metrics.get('avg_repetition_ratio', 0.0)
+            metrics['type_token_ratio'] = fluency_metrics.get('avg_ttr', 0.0)
+            metrics['coherence_score'] = fluency_metrics.get('avg_coherence_score', 0.0)
+            
+            # Flag high repetition as quality issue
+            if metrics['repetition_ratio'] > 0.3:
+                metrics['high_repetition_flag'] = True
+            else:
+                metrics['high_repetition_flag'] = False
         
-        # Apply heavy penalty for repetition
-        repetition_penalty = min(0.7, repetition_ratio * 2.0)  # Severe penalty
-        fluency_score = max(0.0, fluency_base_score - repetition_penalty)
-        
-        fable_structure_score = 0.0
+        # Fable-specific structure
         if 'fable_structure' in individual_results:
             structure_metrics = individual_results['fable_structure'].metrics
-            fable_structure_score = structure_metrics.get('overall_fable_score', 0.0)
+            metrics['narrative_flow'] = structure_metrics.get('avg_narrative_flow_score', 0.0)
+            metrics['moral_clarity'] = structure_metrics.get('avg_moral_clarity_score', 0.0)
+            metrics['has_conflict_rate'] = structure_metrics.get('has_conflict_percentage', 0.0) / 100.0
+            metrics['has_resolution_rate'] = structure_metrics.get('has_resolution_percentage', 0.0) / 100.0
         
-        # Semantic coherence (most important for quality assessment)
-        semantic_score = 0.5  # Default neutral
-        appropriateness_rate = 1.0
-        topic_consistency = 0.5
+        # Semantic coherence
         if 'semantic_coherence' in individual_results:
             semantic_metrics = individual_results['semantic_coherence'].metrics
-            semantic_score = semantic_metrics.get('overall_semantic_coherence', 0.5)
-            appropriateness_rate = semantic_metrics.get('appropriate_sample_rate', 1.0)
-            topic_consistency = semantic_metrics.get('avg_topic_consistency', 0.5)
+            metrics['semantic_coherence'] = semantic_metrics.get('overall_semantic_coherence', 0.5)
+            metrics['topic_consistency'] = semantic_metrics.get('avg_topic_consistency', 0.5)
+            metrics['content_appropriateness'] = semantic_metrics.get('avg_appropriateness', 0.5)
+            metrics['fable_relevance'] = semantic_metrics.get('avg_fable_relevance', 0.5)
+            metrics['appropriate_sample_rate'] = semantic_metrics.get('appropriate_sample_rate', 1.0)
         
-        # Calculate component scores with realistic weighting
-        component_scores = {
-            'semantic_coherence': semantic_score * 0.35,      # Most important
-            'content_appropriateness': appropriateness_rate * 0.20,  # Safety critical
-            'fluency_adjusted': fluency_score * 0.20,         # Penalized for repetition
-            'fable_structure': fable_structure_score * 0.15,  # Domain-specific
-            'text_quality': text_quality_score * 0.10        # Less important than coherence
-        }
+        # Quality assessment flags (interpretable, not arbitrary scores)
+        quality_flags = []
         
-        # Base score from weighted components
-        base_score = sum(component_scores.values())
+        if metrics.get('repetition_ratio', 0.0) > 0.4:
+            quality_flags.append("high_repetition")
         
-        # Additional quality gates
-        quality_issues = []
+        if metrics.get('semantic_coherence', 0.5) < 0.3:
+            quality_flags.append("low_coherence")
         
-        if repetition_ratio > 0.4:
-            quality_issues.append(f"Highly repetitive ({repetition_ratio:.1%})")
+        if metrics.get('appropriate_sample_rate', 1.0) < 0.7:
+            quality_flags.append("inappropriate_content")
         
-        if semantic_score < 0.3:
-            quality_issues.append(f"Incoherent content")
+        if metrics.get('topic_consistency', 0.5) < 0.3:
+            quality_flags.append("off_topic")
         
-        if appropriateness_rate < 0.7:
-            quality_issues.append(f"Inappropriate content")
+        metrics['quality_flags'] = quality_flags
+        metrics['num_quality_issues'] = len(quality_flags)
         
-        if topic_consistency < 0.3:
-            quality_issues.append(f"Off-topic generation")
-        
-        # Determine realistic overall score and rating
-        if len(quality_issues) >= 3 or repetition_ratio > 0.6:
-            # Multiple critical issues
-            overall_score = min(0.25, base_score * 0.5)
-            rating = "Poor"
-        elif len(quality_issues) >= 2 or repetition_ratio > 0.5:
-            # Some critical issues
-            overall_score = min(0.45, base_score * 0.7)
-            rating = "Needs Improvement"
-        elif quality_issues or semantic_score < 0.5:
-            # Minor issues
-            overall_score = min(0.65, base_score * 0.85)
-            rating = "Fair"
-        elif base_score > 0.8 and semantic_score > 0.7:
-            # Actually good quality
-            overall_score = base_score
-            rating = "Good"
+        # Simple quality categorization based on interpretable thresholds
+        if len(quality_flags) >= 3:
+            metrics['quality_category'] = "poor"
+        elif len(quality_flags) >= 2:
+            metrics['quality_category'] = "needs_improvement"
+        elif len(quality_flags) == 1:
+            metrics['quality_category'] = "fair"
+        elif (metrics.get('semantic_coherence', 0.5) > 0.7 and 
+              metrics.get('repetition_ratio', 0.0) < 0.2):
+            metrics['quality_category'] = "good"
         else:
-            # Acceptable quality
-            overall_score = base_score
-            rating = "Acceptable"
+            metrics['quality_category'] = "acceptable"
         
-        # Add quality details to rating
-        if quality_issues:
-            rating += f" - {'; '.join(quality_issues)}"
-        
-        return {
-            'overall_score': overall_score,
-            'quality_rating': rating,
-            'semantic_coherence': semantic_score,
-            'content_appropriateness': appropriateness_rate,
-            'fluency_adjusted': fluency_score,
-            'repetition_ratio': repetition_ratio,
-            'text_quality': text_quality_score,
-            'fable_structure': fable_structure_score,
-            'language_modeling': perplexity_score,
-            'quality_issues': quality_issues,
-            'num_metrics': len(individual_results)
-        }
+        return metrics
     
     def create_summary_report(self, individual_results: Dict[str, EvaluationResult], 
                             overall_metrics: Dict[str, float]) -> str:
-        """Create a human-readable summary report"""
+        """Create a human-readable summary report with interpretable metrics"""
         
         report_lines = [
             "=" * 80,
@@ -171,131 +152,102 @@ class ComprehensiveEvaluator(BaseEvaluator):
             f"Samples: {self.config.num_samples}",
             f"Temperature: {self.config.temperature}",
             "",
-            "OVERALL PERFORMANCE",
-            "-" * 40,
-            f"Overall Score: {overall_metrics.get('overall_score', 0.0):.4f}",
-            ""
+            "INTERPRETABLE METRICS (No Arbitrary Composite Scores)",
+            "-" * 60,
         ]
         
-        # Individual evaluator summaries
-        for evaluator_name, result in individual_results.items():
-            report_lines.append(f"{evaluator_name.upper()} METRICS")
-            report_lines.append("-" * 40)
-            
-            # Extract top metrics for each evaluator
-            metrics = result.metrics
-            
-            if evaluator_name == 'perplexity':
-                report_lines.extend([
-                    f"Weighted Perplexity: {metrics.get('weighted_perplexity', 0.0):.2f}",
-                    f"Average Perplexity: {metrics.get('average_perplexity', 0.0):.2f}",
-                    f"Bits per Character: {metrics.get('average_bits_per_char', 0.0):.3f}"
-                ])
-            elif evaluator_name == 'text_quality':
-                report_lines.extend([
-                    f"BLEU-4: {metrics.get('avg_bleu_4', 0.0):.4f}",
-                    f"ROUGE-L: {metrics.get('avg_rougeL', 0.0):.4f}",
-                    f"BERTScore F1: {metrics.get('bert_f1', 0.0):.4f}",
-                    f"Completion Length: {metrics.get('avg_completion_length', 0.0):.1f} words"
-                ])
-            elif evaluator_name == 'fluency':
-                report_lines.extend([
-                    f"Overall Fluency: {metrics.get('overall_fluency_score', 0.0):.4f}",
-                    f"Type-Token Ratio: {metrics.get('avg_ttr', 0.0):.4f}",
-                    f"Repetition Ratio: {metrics.get('avg_repetition_ratio', 0.0):.4f}",
-                    f"Coherence Score: {metrics.get('avg_coherence_score', 0.0):.4f}"
-                ])
-            elif evaluator_name == 'fable_structure':
-                report_lines.extend([
-                    f"Overall Fable Score: {metrics.get('overall_fable_score', 0.0):.4f}",
-                    f"Narrative Flow: {metrics.get('avg_narrative_flow_score', 0.0):.4f}",
-                    f"Moral Clarity: {metrics.get('avg_moral_clarity_score', 0.0):.4f}",
-                    f"Has Conflict: {metrics.get('has_conflict_percentage', 0.0):.1f}%",
-                    f"Has Resolution: {metrics.get('has_resolution_percentage', 0.0):.1f}%"
-                ])
-            
-            report_lines.append("")
-        
-        # Add semantic coherence metrics if available
-        if 'semantic_coherence' in individual_results:
-            semantic_metrics = individual_results['semantic_coherence'].metrics
+        # Language modeling metrics
+        if 'perplexity' in individual_results:
+            perp_metrics = individual_results['perplexity'].metrics
             report_lines.extend([
-                "SEMANTIC COHERENCE METRICS",
-                "-" * 40,
-                f"Overall Semantic Coherence: {semantic_metrics.get('overall_semantic_coherence', 0.0):.4f}",
-                f"Topic Consistency: {semantic_metrics.get('avg_topic_consistency', 0.0):.4f}",
-                f"Content Appropriateness: {semantic_metrics.get('avg_appropriateness', 0.0):.4f}",
-                f"Fable Relevance: {semantic_metrics.get('avg_fable_relevance', 0.0):.4f}",
-                f"Appropriate Sample Rate: {semantic_metrics.get('appropriate_sample_rate', 0.0):.1%}",
+                "LANGUAGE MODELING",
+                "-" * 20,
+                f"Raw Perplexity: {overall_metrics.get('raw_perplexity', 'N/A')}",
+                f"Log Perplexity: {overall_metrics.get('log_perplexity', 'N/A'):.3f}",
+                f"Bits per Character: {overall_metrics.get('bits_per_char', 'N/A'):.3f}",
                 ""
             ])
         
-        # Performance interpretation with realistic assessment
+        # Semantic similarity (BERTScore only)
+        if 'text_quality' in individual_results:
+            report_lines.extend([
+                "SEMANTIC SIMILARITY",
+                "-" * 20,
+                f"BERTScore F1: {overall_metrics.get('bert_f1', 'N/A'):.4f}",
+                f"BERTScore Precision: {overall_metrics.get('bert_precision', 'N/A'):.4f}",
+                f"BERTScore Recall: {overall_metrics.get('bert_recall', 'N/A'):.4f}",
+                f"Vocabulary Diversity: {overall_metrics.get('vocab_diversity', 'N/A'):.4f}",
+                f"Length Ratio (gen/ref): {overall_metrics.get('length_ratio', 'N/A'):.2f}",
+                ""
+            ])
+        
+        # Fluency and repetition
+        if 'fluency' in individual_results:
+            report_lines.extend([
+                "FLUENCY & REPETITION",
+                "-" * 20,
+                f"Repetition Ratio: {overall_metrics.get('repetition_ratio', 'N/A'):.4f}",
+                f"Type-Token Ratio: {overall_metrics.get('type_token_ratio', 'N/A'):.4f}",
+                f"Coherence Score: {overall_metrics.get('coherence_score', 'N/A'):.4f}",
+                f"High Repetition Flag: {overall_metrics.get('high_repetition_flag', False)}",
+                ""
+            ])
+        
+        # Fable structure
+        if 'fable_structure' in individual_results:
+            report_lines.extend([
+                "FABLE STRUCTURE",
+                "-" * 20,
+                f"Narrative Flow: {overall_metrics.get('narrative_flow', 'N/A'):.4f}",
+                f"Moral Clarity: {overall_metrics.get('moral_clarity', 'N/A'):.4f}",
+                f"Has Conflict Rate: {overall_metrics.get('has_conflict_rate', 'N/A'):.2%}",
+                f"Has Resolution Rate: {overall_metrics.get('has_resolution_rate', 'N/A'):.2%}",
+                ""
+            ])
+        
+        # Semantic coherence
+        if 'semantic_coherence' in individual_results:
+            report_lines.extend([
+                "SEMANTIC COHERENCE",
+                "-" * 20,
+                f"Semantic Coherence: {overall_metrics.get('semantic_coherence', 'N/A'):.4f}",
+                f"Topic Consistency: {overall_metrics.get('topic_consistency', 'N/A'):.4f}",
+                f"Content Appropriateness: {overall_metrics.get('content_appropriateness', 'N/A'):.4f}",
+                f"Fable Relevance: {overall_metrics.get('fable_relevance', 'N/A'):.4f}",
+                f"Appropriate Sample Rate: {overall_metrics.get('appropriate_sample_rate', 'N/A'):.2%}",
+                ""
+            ])
+        
+        # Quality assessment
+        quality_flags = overall_metrics.get('quality_flags', [])
+        quality_category = overall_metrics.get('quality_category', 'unknown')
+        
         report_lines.extend([
-            "PERFORMANCE INTERPRETATION",
-            "-" * 40
+            "QUALITY ASSESSMENT",
+            "-" * 20,
+            f"Quality Category: {quality_category.upper()}",
+            f"Number of Quality Issues: {overall_metrics.get('num_quality_issues', 0)}",
         ])
         
-        quality_rating = overall_metrics.get('quality_rating', 'Unknown')
-        repetition_ratio = overall_metrics.get('repetition_ratio', 0.0)
-        semantic_score = overall_metrics.get('semantic_coherence', 0.0)
+        if quality_flags:
+            report_lines.append("Quality Flags:")
+            for flag in quality_flags:
+                report_lines.append(f"  • {flag.replace('_', ' ').title()}")
+        else:
+            report_lines.append("No major quality issues detected")
         
-        report_lines.append(f"Overall Rating: {quality_rating}")
-        
-        # Add detailed quality breakdown
-        if repetition_ratio > 0.4:
-            report_lines.append(f"⚠️  High repetition detected: {repetition_ratio:.1%} of words are repeated")
-        
-        if semantic_score < 0.5:
-            report_lines.append(f"⚠️  Low semantic coherence: {semantic_score:.2f}/1.0")
-        
-        quality_issues = overall_metrics.get('quality_issues', [])
-        if quality_issues:
-            report_lines.append("🔍 Identified Quality Issues:")
-            for issue in quality_issues:
-                report_lines.append(f"   • {issue}")
-        
-        # Recommendations based on actual performance
         report_lines.extend([
             "",
-            "RECOMMENDATIONS",
-            "-" * 40
+            "INTERPRETATION NOTES",
+            "-" * 20,
+            "• Metrics are reported individually for transparency",
+            "• No arbitrary composite scores or magic number weights",
+            "• BERTScore measures semantic similarity to reference",
+            "• Quality flags indicate specific issues, not overall scores",
+            "• Perplexity indicates language modeling capability",
+            "• All thresholds are interpretable and domain-motivated",
+            ""
         ])
-        
-        recommendations = []
-        
-        # Priority recommendations based on critical issues
-        if repetition_ratio > 0.5:
-            recommendations.append("• CRITICAL: Address severe repetition issues - consider adjusting temperature or top-p sampling")
-        elif repetition_ratio > 0.3:
-            recommendations.append("• HIGH: Reduce repetition through better decoding strategies")
-        
-        if semantic_score < 0.3:
-            recommendations.append("• CRITICAL: Improve semantic coherence - model generates incoherent content")
-        elif semantic_score < 0.5:
-            recommendations.append("• HIGH: Focus on semantic coherence and topic consistency")
-        
-        if overall_metrics.get('content_appropriateness', 1.0) < 0.7:
-            recommendations.append("• HIGH: Address inappropriate content generation")
-        
-        # Secondary recommendations
-        if overall_metrics.get('language_modeling', 0.0) < 0.4:
-            recommendations.append("• Consider fine-tuning to improve language modeling (high perplexity)")
-        
-        if overall_metrics.get('fable_structure', 0.0) < 0.5:
-            recommendations.append("• Improve fable-specific structure and narrative elements")
-        
-        if overall_metrics.get('text_quality', 0.0) < 0.3:
-            recommendations.append("• Focus on improving reference-based quality metrics")
-        
-        # If no critical issues, add positive feedback
-        if not recommendations and overall_metrics.get('overall_score', 0.0) > 0.6:
-            recommendations.append("✅ Model shows good performance - consider evaluation on more diverse prompts")
-        elif not recommendations:
-            recommendations.append("• Model needs comprehensive improvement across multiple dimensions")
-        
-        report_lines.extend(recommendations)
-        report_lines.append("=" * 80)
         
         return "\n".join(report_lines)
     

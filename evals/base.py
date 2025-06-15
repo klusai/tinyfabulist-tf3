@@ -26,7 +26,7 @@ logger = get_logger()
 
 @dataclass
 class EvaluationConfig:
-    """Configuration for evaluation runs"""
+    """Configuration for evaluation runs with improved methodological standards"""
     model_name: str = "gpt2"
     dataset_name: str = "klusai/ds-tf1-en-3m"
     dataset_split: str = "Test"
@@ -40,10 +40,10 @@ class EvaluationConfig:
     save_generations: bool = False
     verbose: bool = True
     
-    # Standardized prompt length controls
+    # Improved prompt length controls (removes arbitrary ratio splitting)
     max_prompt_tokens: int = 256
     min_prompt_tokens: int = 50
-    prompt_truncation_strategy: str = "right"  # "left", "right", or "middle"
+    # Removed prompt_split_ratio - now uses principled sentence boundary detection
     
     # Statistical rigor
     num_evaluation_runs: int = 1
@@ -53,13 +53,23 @@ class EvaluationConfig:
     # Evaluation standards
     min_samples_per_evaluation: int = 100
     stratified_sampling: bool = True
-    prompt_split_ratio: float = 0.6  # 60% for prompt, 40% for reference
     
     # Reporting standards
     report_confidence_intervals: bool = True
     report_effect_sizes: bool = True
     save_raw_results: bool = True
     length_normalize_metrics: bool = True
+    
+    def __post_init__(self):
+        """Validate configuration parameters"""
+        if self.max_prompt_tokens <= self.min_prompt_tokens:
+            raise ValueError("max_prompt_tokens must be greater than min_prompt_tokens")
+        if self.confidence_level <= 0 or self.confidence_level >= 1:
+            raise ValueError("confidence_level must be between 0 and 1")
+        if self.num_samples < 1:
+            raise ValueError("num_samples must be at least 1")
+        if self.min_samples_per_evaluation < 10:
+            raise ValueError("min_samples_per_evaluation should be at least 10 for meaningful statistics")
 
 
 @dataclass 
@@ -178,7 +188,10 @@ class BaseEvaluator(ABC):
     
     def _create_standardized_prompt(self, fable_text: str) -> Optional[Dict[str, Any]]:
         """
-        Create standardized prompts with fixed token-based length controls
+        Create prompts using improved methodology that respects narrative structure.
+        
+        Instead of arbitrary percentage splits, attempts to find natural breaking points
+        in the text while maintaining consistent prompt lengths for fair evaluation.
         
         Args:
             fable_text: Full fable text
@@ -190,81 +203,126 @@ class BaseEvaluator(ABC):
         from transformers import AutoTokenizer
         
         # Use a simple tokenizer for length estimation
-        # In practice, this should use the same tokenizer as the model
         try:
             tokenizer = AutoTokenizer.from_pretrained("gpt2")
         except:
             # Fallback to simple word-based tokenization
-            tokens = fable_text.split()
-            total_tokens = len(tokens)
-            
-            # Use word-based splitting as fallback
-            split_point = int(total_tokens * self.config.prompt_split_ratio)
-            
-            if split_point < self.config.min_prompt_tokens // 4:  # Rough conversion
-                split_point = self.config.min_prompt_tokens // 4
-            if total_tokens - split_point < 10:  # Minimum reference
-                split_point = total_tokens - 10
-                
-            if split_point <= 0 or split_point >= total_tokens:
-                return None
-                
-            prompt = ' '.join(tokens[:split_point])
-            reference = ' '.join(tokens[split_point:])
-            
-            return {
-                'prompt': prompt,
-                'reference': reference,
-                'prompt_length': split_point,
-                'reference_length': total_tokens - split_point,
-                'split_ratio': split_point / total_tokens
-            }
+            return self._fallback_word_splitting(fable_text)
         
         # Tokenize the full fable
         tokens = tokenizer.encode(fable_text)
         total_tokens = len(tokens)
         
         # Check minimum length requirements
-        min_total_tokens = self.config.min_prompt_tokens + 20  # 20 tokens minimum for reference
+        min_total_tokens = self.config.min_prompt_tokens + 30  # 30 tokens minimum for meaningful reference
         if total_tokens < min_total_tokens:
             return None
         
-        # Calculate split point based on configuration
-        split_point = int(total_tokens * self.config.prompt_split_ratio)
+        # Try to find natural breaking points in the text
+        # This is more principled than arbitrary percentage splits
+        sentences = self._split_into_sentences(fable_text)
+        if len(sentences) < 2:
+            # Fallback to token-based splitting if sentence splitting fails
+            return self._token_based_splitting(tokenizer, tokens, total_tokens)
         
-        # Ensure minimum prompt length
-        if split_point < self.config.min_prompt_tokens:
-            split_point = self.config.min_prompt_tokens
+        # Find optimal split point based on target prompt length
+        target_prompt_tokens = min(self.config.max_prompt_tokens, 
+                                 max(self.config.min_prompt_tokens, total_tokens // 2))
+        
+        best_split = self._find_optimal_sentence_split(
+            sentences, tokenizer, target_prompt_tokens, total_tokens
+        )
+        
+        if best_split is None:
+            # Fallback to token-based splitting
+            return self._token_based_splitting(tokenizer, tokens, total_tokens)
+        
+        prompt, reference, prompt_tokens, reference_tokens = best_split
+        
+        return {
+            'prompt': prompt,
+            'reference': reference,
+            'prompt_length': prompt_tokens,
+            'reference_length': reference_tokens,
+            'split_ratio': prompt_tokens / total_tokens,
+            'split_method': 'sentence_boundary'
+        }
+    
+    def _split_into_sentences(self, text: str) -> List[str]:
+        """Split text into sentences using simple heuristics"""
+        import re
+        
+        # Simple sentence splitting - can be improved with NLTK if available
+        sentences = re.split(r'[.!?]+\s+', text.strip())
+        sentences = [s.strip() for s in sentences if s.strip()]
+        
+        # Handle case where last sentence doesn't end with punctuation
+        if not text.strip().endswith(('.', '!', '?')):
+            # The last split might have removed the final part
+            remaining = text.strip()
+            for sent in sentences[:-1]:
+                remaining = remaining.replace(sent, '', 1)
+            if remaining.strip():
+                sentences[-1] = remaining.strip()
+        
+        return sentences
+    
+    def _find_optimal_sentence_split(self, sentences: List[str], tokenizer, 
+                                   target_prompt_tokens: int, total_tokens: int) -> Optional[tuple]:
+        """Find the best sentence boundary to split at"""
+        
+        best_split = None
+        best_score = float('inf')
+        
+        # Try different split points
+        for i in range(1, len(sentences)):
+            prompt_text = ' '.join(sentences[:i])
+            reference_text = ' '.join(sentences[i:])
             
+            # Skip if reference is too short
+            if len(reference_text.split()) < 10:
+                continue
+            
+            prompt_tokens = len(tokenizer.encode(prompt_text))
+            reference_tokens = len(tokenizer.encode(reference_text))
+            
+            # Skip if prompt is too short or too long
+            if prompt_tokens < self.config.min_prompt_tokens:
+                continue
+            if prompt_tokens > self.config.max_prompt_tokens:
+                break  # Later splits will be even longer
+            
+            # Score based on how close we are to target length
+            # Prefer splits that are closer to target but not over max
+            score = abs(prompt_tokens - target_prompt_tokens)
+            
+            if score < best_score:
+                best_score = score
+                best_split = (prompt_text, reference_text, prompt_tokens, reference_tokens)
+        
+        return best_split
+    
+    def _token_based_splitting(self, tokenizer, tokens: List[int], total_tokens: int) -> Optional[Dict[str, Any]]:
+        """Fallback to token-based splitting when sentence splitting fails"""
+        
+        # Use a more principled approach than arbitrary ratios
+        # Aim for prompts that are substantial but leave room for meaningful completion
+        target_prompt_tokens = min(
+            self.config.max_prompt_tokens,
+            max(self.config.min_prompt_tokens, total_tokens * 2 // 3)  # Up to 2/3 of text
+        )
+        
         # Ensure minimum reference length
-        min_reference_tokens = 20
-        if total_tokens - split_point < min_reference_tokens:
-            split_point = total_tokens - min_reference_tokens
+        min_reference_tokens = 30
+        if total_tokens - target_prompt_tokens < min_reference_tokens:
+            target_prompt_tokens = total_tokens - min_reference_tokens
             
         # Final validation
-        if split_point <= 0 or split_point >= total_tokens:
+        if target_prompt_tokens <= 0 or target_prompt_tokens >= total_tokens:
             return None
         
-        # Apply prompt length limit
-        if split_point > self.config.max_prompt_tokens:
-            if self.config.prompt_truncation_strategy == "right":
-                split_point = self.config.max_prompt_tokens
-            elif self.config.prompt_truncation_strategy == "left":
-                # Keep the end of the prompt
-                start_point = split_point - self.config.max_prompt_tokens
-                prompt_tokens = tokens[start_point:split_point]
-                reference_tokens = tokens[split_point:]
-            else:  # middle truncation
-                # Keep beginning and end, remove middle
-                keep_start = self.config.max_prompt_tokens // 2
-                keep_end = self.config.max_prompt_tokens - keep_start
-                prompt_tokens = tokens[:keep_start] + tokens[split_point-keep_end:split_point]
-                reference_tokens = tokens[split_point:]
-        
-        # Standard case: right truncation or no truncation needed
-        if self.config.prompt_truncation_strategy == "right" or split_point <= self.config.max_prompt_tokens:
-            prompt_tokens = tokens[:split_point]
-            reference_tokens = tokens[split_point:]
+        prompt_tokens = tokens[:target_prompt_tokens]
+        reference_tokens = tokens[target_prompt_tokens:]
         
         # Decode back to text
         prompt = tokenizer.decode(prompt_tokens, skip_special_tokens=True)
@@ -275,7 +333,41 @@ class BaseEvaluator(ABC):
             'reference': reference,
             'prompt_length': len(prompt_tokens),
             'reference_length': len(reference_tokens),
-            'split_ratio': len(prompt_tokens) / total_tokens
+            'split_ratio': len(prompt_tokens) / total_tokens,
+            'split_method': 'token_boundary'
+        }
+    
+    def _fallback_word_splitting(self, fable_text: str) -> Optional[Dict[str, Any]]:
+        """Fallback word-based splitting when tokenizer is not available"""
+        words = fable_text.split()
+        total_words = len(words)
+        
+        if total_words < 20:  # Too short
+            return None
+        
+        # Use similar logic as token-based splitting
+        target_prompt_words = min(
+            self.config.max_prompt_tokens // 2,  # Rough conversion
+            max(self.config.min_prompt_tokens // 2, total_words * 2 // 3)
+        )
+        
+        min_reference_words = 10
+        if total_words - target_prompt_words < min_reference_words:
+            target_prompt_words = total_words - min_reference_words
+            
+        if target_prompt_words <= 0 or target_prompt_words >= total_words:
+            return None
+            
+        prompt = ' '.join(words[:target_prompt_words])
+        reference = ' '.join(words[target_prompt_words:])
+        
+        return {
+            'prompt': prompt,
+            'reference': reference,
+            'prompt_length': target_prompt_words,
+            'reference_length': total_words - target_prompt_words,
+            'split_ratio': target_prompt_words / total_words,
+            'split_method': 'word_boundary'
         }
     
     def generate_completion(self, model, tokenizer, prompt: str, max_new_tokens: int = 150) -> str:

@@ -11,10 +11,34 @@ OUTPUT_DIR = "checkpoints/mamba-50M"
 TOKENIZER_PATH = "artifacts/tokenizers_2025_09_10_11_05_41/unigram_tokenizer.json"
 DATASET_PATH = "artifacts/ds-tf2-en-ro-3m-tokenized"
 
+    
 # Load tokenizer
 tokenizer = PreTrainedTokenizerFast(
     tokenizer_file=TOKENIZER_PATH
 )
+
+special_tokens = {
+    "bos_token": "<bos>",
+    "eos_token": "<eos>",
+    "unk_token": "<unk>",
+    "pad_token": "<pad>",
+}
+tokenizer.add_special_tokens(special_tokens)
+
+# Now align with model
+model.config.pad_token_id = tokenizer.pad_token_id
+model.config.bos_token_id = tokenizer.bos_token_id
+model.config.eos_token_id = tokenizer.eos_token_id
+model.generation_config.pad_token_id = tokenizer.pad_token_id
+model.generation_config.bos_token_id = tokenizer.bos_token_id
+model.generation_config.eos_token_id = tokenizer.eos_token_id
+
+
+model.config.pad_token_id = tokenizer.pad_token_id
+model.generation_config.pad_token_id = tokenizer.pad_token_id
+tokenizer.padding_side = "right"
+
+model.resize_token_embeddings(len(tokenizer))
 
 # Load preprocessed dataset from disk
 dataset = load_from_disk(DATASET_PATH)
@@ -28,30 +52,31 @@ else:
     train_dataset = split["train"]
     eval_dataset = split["test"]
 
-collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
+collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False, pad_to_multiple_of=8)
 
 args = TrainingArguments(
     output_dir=OUTPUT_DIR,
-    per_device_train_batch_size=48,  # H200 141GB can handle larger batches; adjust if needed
-    gradient_accumulation_steps=2,
+    per_device_train_batch_size=96,  # H200 141GB can handle larger batches; adjust if needed
+    gradient_accumulation_steps=1,
     learning_rate=3e-4,
-    warmup_steps=500,
+    warmup_steps=100,
     num_train_epochs=20,
     save_steps=200,
     logging_steps=100,
-    evaluation_strategy="steps",
+    eval_strategy="steps",
     eval_steps=200,
     save_total_limit=3,
     bf16=True,
-    gradient_checkpointing=True,
-    report_to="wandb",
+    gradient_checkpointing=False,
+    report_to="none",
     dataloader_num_workers=16,
     dataloader_pin_memory=True,
-    load_best_model_at_end=True,
+    dataloader_persistent_workers=True,
     metric_for_best_model="eval_loss",
     greater_is_better=False,
     optim="adamw_torch_fused",
-    torch_compile=True,
+    include_tokens_per_second=True,
+    torch_compile=False,
 )
 
 # Add early stopping callback

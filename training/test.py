@@ -1,7 +1,7 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
 from transformers.generation.stopping_criteria import StoppingCriteria
 
-checkpoint = "mamba50M"
+checkpoint = "/home/andrei/Documents/Work/tf3/artifacts/training/checkpoints/mamba50MF/checkpoint-28200"
 
 tokenizer = AutoTokenizer.from_pretrained(checkpoint)
 
@@ -23,15 +23,19 @@ model = AutoModelForCausalLM.from_pretrained(checkpoint, torch_dtype=preferred_d
 model.to(device)
 model.eval()
 
-prompt = "În curtea mare a unui castel, un raton nemilos"
+prompt = "Un iepure aleargă prin pădure și"
 inputs = tokenizer(prompt, return_tensors="pt").to(device)
 
 # Remove token_type_ids if present
 if "token_type_ids" in inputs:
     inputs.pop("token_type_ids")
 
-# Streamer for incremental text output
-streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
+# Streamer for incremental text output (disable cleanup to avoid dropping spaces)
+streamer = TextIteratorStreamer(
+    tokenizer,
+    skip_special_tokens=True,
+    clean_up_tokenization_spaces=False,
+)
 
 # Token counter via StoppingCriteria
 class TokenCounter(StoppingCriteria):
@@ -53,9 +57,9 @@ counter = TokenCounter(start_len)
 # Start generation in a background thread to allow streaming consumption
 gen_kwargs = dict(
     **inputs,
-    max_new_tokens=400,
-    do_sample=True,
-    temperature=0.2,
+    max_new_tokens=500,
+    do_sample=False,
+    temperature=0.5,
     top_p=0.9,
     eos_token_id=tokenizer.eos_token_id,
     use_cache=True,

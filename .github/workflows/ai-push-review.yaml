@@ -1,9 +1,7 @@
 name: AI Push Review
 
 on:
-  push:
-    branches:
-      - "**"
+  workflow_dispatch:
 
 jobs:
   ai_review:
@@ -38,7 +36,7 @@ jobs:
           )
 
           resp = client.chat.completions.create(
-              model="google/gemini-2.5-flash-lite",
+              model="openai/gpt-5-mini",
               messages=[
                   {"role": "system", "content": "You are a senior ML paper reviewer. Be brief, judgmental on the big picture, and propose concrete remedies. Avoid code nitpicks unless they break results."},
                   {"role": "user", "content": f"Given this git diff, produce a VERY CONCISE, HOLISTIC REVIEW (bullet points). Do NOT restate changes. Judge the overall approach: objectives/scope, dataset quality/splits/leakage, tokenizer/model alignment, training regime (loss, schedule, regularization), evaluation design (benchmarks, baselines, ablations, seeds, confidence), reproducibility (versions, scripts), safety/compliance (PII/licensing). For esach issue, give a concrete fix. End with a 3–5 item ‘Next steps’ checklist focusing on experiments or documentation to add.\n\nDiff:\n\n{diff}"}

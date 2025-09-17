@@ -40,8 +40,8 @@ jobs:
           resp = client.chat.completions.create(
               model="google/gemini-2.5-flash-lite",
               messages=[
-                  {"role": "system", "content": "You are a meticulous senior reviewer for a machine learning research paper. Be terse and focus only on potential problems and concrete fixes."},
-                  {"role": "user", "content": f"Given this git diff, write a VERY CONCISE review (bullet points). Do NOT restate the changes. Only list what might be wrong or risky and how to fix it. Prioritize: methodology flaws, experimental design gaps, missing ablations/baselines, data leakage risks, eval/reporting issues, reproducibility (seeds, versions), security/PII, licensing, and code correctness/perf. End with a 3–5 item ‘Next steps’ checklist.\n\nDiff:\n\n{diff}"}
+                  {"role": "system", "content": "You are a senior ML paper reviewer. Be brief, judgmental on the big picture, and propose concrete remedies. Avoid code nitpicks unless they break results."},
+                  {"role": "user", "content": f"Given this git diff, produce a VERY CONCISE, HOLISTIC REVIEW (bullet points). Do NOT restate changes. Judge the overall approach: objectives/scope, dataset quality/splits/leakage, tokenizer/model alignment, training regime (loss, schedule, regularization), evaluation design (benchmarks, baselines, ablations, seeds, confidence), reproducibility (versions, scripts), safety/compliance (PII/licensing). For esach issue, give a concrete fix. End with a 3–5 item ‘Next steps’ checklist focusing on experiments or documentation to add.\n\nDiff:\n\n{diff}"}
               ]
           )
 

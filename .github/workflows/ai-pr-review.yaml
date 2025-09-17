@@ -1,27 +1,47 @@
+name: AI Push Review
+
+on:
+  push:
+    branches:
+      - "**"   # run on every branch push
+
 jobs:
   ai_review:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      issues: write
+      issues: write   # needed to open issues
 
     steps:
       - name: Check out code
         uses: actions/checkout@v4
 
-      - name: Install OpenAI CLI
-        run: |
-          pip install openai==1.79.0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install OpenAI SDK
+        run: pip install openai==1.79.0
 
       - name: Generate AI Review
         run: |
-          DIFF=$(git show -U0 HEAD)
-          echo "Reviewing diff with OpenAI..."
-          REVIEW=$(echo "$DIFF" | openai chat.completions.create \
-            -m gpt-5-mini \
-            -g user \
-            -c "You are acting as a research paper assistant reviewing this push. Provide constructive, detailed feedback in the style of an academic peer review.")
-          echo "$REVIEW" > review.md
+          python - <<'EOF'
+          import subprocess, openai, os
+
+          diff = subprocess.check_output(["git", "show", "-U0", "HEAD"], text=True)
+          client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+          resp = client.chat.completions.create(
+              model="gpt-4o-mini",
+              messages=[
+                  {"role": "system", "content": "You are a research paper assistant reviewing code pushes."},
+                  {"role": "user", "content": f"Review this code diff as if preparing it for a research paper:\n\n{diff}"}
+              ]
+          )
+          review = resp.choices[0].message.content
+          with open("review.md", "w", encoding="utf-8") as f:
+              f.write(review)
+          EOF
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 

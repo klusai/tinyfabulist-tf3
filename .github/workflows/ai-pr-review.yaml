@@ -1,0 +1,40 @@
+name: AI PR Review
+
+on:
+  push:
+    branches:
+      - "**"   # run on every branch push
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+jobs:
+  ai_review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Run AI Code Review
+        uses: sshnaidm/gpt-code-review-action@v3.0
+        with:
+          openai-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt: |
+            You are acting as a research paper assistant reviewing this Pull Request.
+            Provide constructive, detailed feedback in the style of an academic peer review.
+            
+            Focus on:
+            - Clarity of explanations and naming (as if writing methods & results in a paper).
+            - Reproducibility: Are experiments, configs, or code easy to replicate?
+            - Scientific rigor: Are assumptions or algorithms well justified?
+            - Structure & readability: Does the code read like publishable pseudocode?
+            - Missing references, comments, or tests that would strengthen the "research paper quality".
+            
+            Write your suggestions as if you are helping the author prepare this work
+            for publication in a top-tier conference.

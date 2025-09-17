@@ -1,0 +1,60 @@
+name: AI Push Review
+
+on:
+  push:
+    branches:
+      - "**"
+
+jobs:
+  ai_review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install OpenAI SDK
+        run: pip install openai==1.79.0
+
+      - name: Generate AI Review (via OpenRouter)
+        run: |
+          python - <<'EOF'
+          import subprocess, openai, os
+
+          diff = subprocess.check_output(["git", "show", "-U0", "HEAD"], text=True)
+
+          # Configure OpenRouter as the base URL
+          client = openai.OpenAI(
+              base_url="https://openrouter.ai/api/v1",
+              api_key=os.environ["OPENROUTER_API_KEY"]
+          )
+
+          resp = client.chat.completions.create(
+              model="google/gemini-2.5-flash-lite",
+              messages=[
+                  {"role": "system", "content": "You are a meticulous senior reviewer for a machine learning research paper. Be terse and focus only on potential problems and concrete fixes."},
+                  {"role": "user", "content": f"Given this git diff, write a VERY CONCISE review (bullet points). Do NOT restate the changes. Only list what might be wrong or risky and how to fix it. Prioritize: methodology flaws, experimental design gaps, missing ablations/baselines, data leakage risks, eval/reporting issues, reproducibility (seeds, versions), security/PII, licensing, and code correctness/perf. End with a 3–5 item ‘Next steps’ checklist.\n\nDiff:\n\n{diff}"}
+              ]
+          )
+
+          review = resp.choices[0].message.content
+          with open("review.md", "w", encoding="utf-8") as f:
+              f.write(review)
+          EOF
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+
+      - name: Create GitHub Issue with AI Suggestions
+        uses: peter-evans/create-issue-from-file@v4
+        with:
+          title: "AI Review Suggestions for push ${{ github.sha }}"
+          content-filepath: review.md
+          labels: ai-review, research-paper

@@ -1,23 +1,22 @@
-# .github/workflows/ai-push-review.yml
 name: AI Push Review
 
 on:
   push:
     branches:
-      - "**"   # run on every push to any branch
+      - "**"   # run on every push
 
 jobs:
   ai_review:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      issues: write   # needed to create issues
+      issues: write   # <-- allow creating issues
 
     steps:
       - name: Check out code
         uses: actions/checkout@v4
 
-      - name: Generate AI Suggestions
+      - name: Run AI Code Review
         id: ai
         uses: sshnaidm/gpt-code-review-action@v3.0
         with:
@@ -34,7 +33,7 @@ jobs:
             - Readability and structure like publishable pseudocode
             - Missing references, comments, or tests
 
-      - name: Create GitHub Issue with Suggestions
+      - name: Create GitHub Issue with AI Suggestions
         uses: peter-evans/create-issue-from-file@v4
         with:
           title: "AI Review Suggestions for push ${{ github.sha }}"

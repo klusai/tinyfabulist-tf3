@@ -24,30 +24,33 @@ jobs:
       - name: Install OpenAI SDK
         run: pip install openai==1.79.0
 
-      - name: Generate AI Review
+      - name: Generate AI Review (via OpenRouter)
         run: |
           python - <<'EOF'
           import subprocess, openai, os
 
           diff = subprocess.check_output(["git", "show", "-U0", "HEAD"], text=True)
+
+          # Configure OpenRouter as the base URL
           client = openai.OpenAI(
-              api_key=os.environ["OPENAI_API_KEY"],
-              project=os.environ["OPENAI_PROJECT"]
+              base_url="https://openrouter.ai/api/v1",
+              api_key=os.environ["OPENROUTER_API_KEY"]
           )
+
           resp = client.chat.completions.create(
-              model="gpt-4o-mini",
+              model="anthropic/claude-3.5-sonnet",  # or "openai/gpt-4o-mini", etc.
               messages=[
                   {"role": "system", "content": "You are a research paper assistant reviewing code pushes."},
                   {"role": "user", "content": f"Review this code diff as if preparing it for a research paper:\n\n{diff}"}
               ]
           )
+
           review = resp.choices[0].message.content
           with open("review.md", "w", encoding="utf-8") as f:
               f.write(review)
           EOF
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_PROJECT: ${{ secrets.OPENAI_PROJECT }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
 
       - name: Create GitHub Issue with AI Suggestions
         uses: peter-evans/create-issue-from-file@v4

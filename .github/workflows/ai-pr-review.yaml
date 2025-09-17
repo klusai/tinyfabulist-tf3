@@ -1,10 +1,3 @@
-name: AI Push Review
-
-on:
-  push:
-    branches:
-      - "**"
-
 jobs:
   ai_review:
     runs-on: ubuntu-latest
@@ -16,17 +9,21 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
 
+      - name: Install OpenAI CLI
+        run: |
+          pip install openai==1.79.0
+
       - name: Generate AI Review
-        id: review
         run: |
           DIFF=$(git show -U0 HEAD)
           echo "Reviewing diff with OpenAI..."
-          REVIEW=$(echo "$DIFF" | \
-            openai api chat.completions.create \
-              -m gpt-5-mini \
-              -g user \
-              -c "You are acting as a research paper assistant reviewing this push. Provide constructive, detailed feedback in the style of an academic peer review.")
+          REVIEW=$(echo "$DIFF" | openai chat.completions.create \
+            -m gpt-5-mini \
+            -g user \
+            -c "You are acting as a research paper assistant reviewing this push. Provide constructive, detailed feedback in the style of an academic peer review.")
           echo "$REVIEW" > review.md
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
       - name: Create GitHub Issue with AI Suggestions
         uses: peter-evans/create-issue-from-file@v4

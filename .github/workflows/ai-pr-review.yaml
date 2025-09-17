@@ -3,14 +3,14 @@ name: AI Push Review
 on:
   push:
     branches:
-      - "**"   # run on every branch push
+      - "**"
 
 jobs:
   ai_review:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      issues: write   # needed to open issues
+      issues: write
 
     steps:
       - name: Check out code
@@ -30,7 +30,10 @@ jobs:
           import subprocess, openai, os
 
           diff = subprocess.check_output(["git", "show", "-U0", "HEAD"], text=True)
-          client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+          client = openai.OpenAI(
+              api_key=os.environ["OPENAI_API_KEY"],
+              project=os.environ["OPENAI_PROJECT"]
+          )
           resp = client.chat.completions.create(
               model="gpt-4o-mini",
               messages=[
@@ -44,6 +47,7 @@ jobs:
           EOF
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_PROJECT: ${{ secrets.OPENAI_PROJECT }}
 
       - name: Create GitHub Issue with AI Suggestions
         uses: peter-evans/create-issue-from-file@v4

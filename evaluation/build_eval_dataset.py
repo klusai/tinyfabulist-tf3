@@ -85,33 +85,30 @@ def worker(rank: int, model_path: str, out_path: str, chars: List[str], max_new:
     return part_path
 
 
-def main():
-    args = parse_args()
+def build_eval_dataset(model_path: str, output_path: str, workers: int, max_new_tokens: int = 200, temperature: float = 0.7, top_k: int = 10, seed: int = datetime.now().timestamp()):
+    model_name = model_path.rstrip('/').split('/')[-1]
 
-    model_name = args.model
-    model_name = model_name.rstrip('/').split('/')[-1]
-
-    args.output = os.path.join(os.path.dirname(__file__), "artifacts", "evaluation", f"{model_name}" ,  f"{datetime.now().strftime('%Y%m%d_%H%M%S')}", "ro_sentences.txt")
-    os.makedirs(os.path.dirname(args.output), exist_ok=True)
+    output_path = os.path.join(os.path.dirname(__file__), "artifacts", "evaluation", f"{model_name}" ,  f"{datetime.now().strftime('%Y%m%d_%H%M%S')}", "ro_sentences.txt")
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     # Prepare chunks
-    chunks = chunk_list(CHARACTERS, args.workers)
+    chunks = chunk_list(CHARACTERS, workers)
 
     # Launch workers
     mp.set_start_method("spawn", force=True)
-    with mp.Pool(processes=args.workers) as pool:
+    with mp.Pool(processes=workers) as pool:
         results = [
             pool.apply_async(
                 worker,
                 kwds=dict(
                     rank=idx,
-                    model_path=args.model,
-                    out_path=args.output,
+                    model_path=model_path,
+                    out_path=output_path,
                     chars=chunk,
-                    max_new=args["max-new-tokens"] if isinstance(args, dict) else args.max_new_tokens,
-                    temp=args.temperature,
-                    top_k=args.top_k,
-                    seed=args.seed,
+                    max_new=max_new_tokens,
+                    temp=temperature,
+                    top_k=top_k,
+                    seed=seed,
                 ),
             )
             for idx, chunk in enumerate(chunks)
@@ -126,7 +123,14 @@ def main():
                     out_f.write(line)
             os.remove(pf)
 
-    print(f"Wrote {sum(1 for _ in open(args.output, 'r', encoding='utf-8'))} sentences to {args.output}")
+    print(f"Wrote {sum(1 for _ in open(output_path, 'r', encoding='utf-8'))} sentences to {output_path}")
+
+
+
+def main():
+    args = parse_args()
+
+    build_eval_dataset(args.model, args.workers, args.max_new_tokens, args.temperature, args.top_k, args.seed)
 
 
 if __name__ == "__main__":

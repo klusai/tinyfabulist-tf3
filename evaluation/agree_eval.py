@@ -1,6 +1,6 @@
 import argparse
 import os
-
+from typing import List
 import torch
 import torch.nn.functional as F
 from transformers import AutoTokenizer, AutoModelForCausalLM
@@ -75,13 +75,7 @@ def check_agreement(sentence):
 
     return errors
 
-def main():
-    parser = argparse.ArgumentParser()
-    src = parser.add_mutually_exclusive_group(required=True)
-    src.add_argument("--text", type=str, help="Single input text")
-    src.add_argument("--file", type=str, help="Path to a file with one text per line (UTF-8)")
-    args = parser.parse_args()
-
+def compute_agree_stats(texts: List[str], file: str = None):
     nlp = build_nlp()
 
     dataset_stats = {
@@ -90,15 +84,15 @@ def main():
         "agree": 0.0
     }
 
-    if args.text:
-        for text in args.text:
+    if texts:
+        for text in texts:
             doc = nlp(text)
             for sent in doc.sentences:
                 dataset_stats["total_sentences"] += 1
                 mistakes = len(check_agreement(sent))
                 dataset_stats["total_mistakes"] += mistakes
-    elif args.file:
-        with open(args.file, "r", encoding="utf-8") as f:
+    elif file:
+        with open(file, "r", encoding="utf-8") as f:
             for text in f:
                 doc = nlp(text)
                 for sent in doc.sentences:
@@ -108,9 +102,12 @@ def main():
 
     dataset_stats["agree"] = dataset_stats["total_mistakes"] / dataset_stats["total_sentences"]
 
-    print(f"Total sentences: {dataset_stats['total_sentences']}")
-    print(f"Total mistakes: {dataset_stats['total_mistakes']}")
-    print(f"Agree: {dataset_stats['agree']:.4f}")
+    return dataset_stats
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--texts", type=str, help="Single input text")
+    parser.add_argument("--file", type=str, help="Path to a file with one text per line (UTF-8)")
+    args = parser.parse_args()
+
+    compute_agree_stats(args.texts, args.file)

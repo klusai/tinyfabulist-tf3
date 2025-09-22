@@ -7,6 +7,7 @@ from tf3.evaluation.build_eval_dataset import build_eval_dataset
 from tf3.evaluation.general_metrics import compute_ce_ppl, load_texts
 import argparse
 from tf3.logger import get_logger
+from tf3.evaluation.agree_eval import compute_agree_stats
 
 ARTIFACTS_FOLDER = "tf3/evaluation/artifacts"
 CHECKPOINTS_FOLDER = "tf3/artifacts/training"
@@ -39,8 +40,8 @@ def get_all_checkpoints(folder_name: str) -> List[str]:
     subfolders = get_all_subfolders(folder_name)
     return list(filter(lambda x: x.split("/")[-1].startswith("mamba") and "checkpoint" in x, subfolders))
 
-def main():
-    console_logger.info(f"Processing {ARTIFACTS_FOLDER}")
+def main(agree_stats: bool = False, cross_entropy: bool = True):
+    console_logger.info(f"Processing {ARTIFACTS_FOLDER}")   
     for checkpoint in get_all_checkpoints(CHECKPOINTS_FOLDER):
         console_logger.info(f"Processing {checkpoint}")
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -77,17 +78,21 @@ def main():
 
         texts = load_texts(args)
 
-        ce_all, ppl_all = compute_ce_ppl(
-            model=model,
-            tokenizer=tokenizer,
-            texts=texts,
-            batch_size=args.batch_size,
-            max_length=args.max_length,
-            device=device,
-        )
+        if cross_entropy:
+            ce_all, ppl_all = compute_ce_ppl(
+                model=model,
+                tokenizer=tokenizer,
+                texts=texts,
+                batch_size=args.batch_size,
+                max_length=args.max_length,
+                device=device,
+            )
+            artifacts_logger.info(f"{checkpoint.split('/')[-1]}, CE: {ce_all:.4f}, PPL: {ppl_all:.4f}")
 
-        artifacts_logger.info(f"{checkpoint.split('/')[-1]}, CE: {ce_all:.4f}, PPL: {ppl_all:.4f}")
+        if agree_stats:
+            agree_stats = compute_agree_stats(texts)
+            artifacts_logger.info(f"{checkpoint.split('/')[-1]}, Agree: {agree_stats['agree']:.4f}")
 
 
 if __name__ == "__main__":
-    main()
+    main(agree_stats=True, cross_entropy=False)

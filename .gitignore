@@ -1,3 +1,4 @@
 artifacts/
 .venv/
 mamba50M*/
+__pycache__/

@@ -85,7 +85,7 @@ def worker(rank: int, model_path: str, out_path: str, chars: List[str], max_new:
     return part_path
 
 
-def build_eval_dataset(model_path: str, output_path: str, workers: int, max_new_tokens: int = 200, temperature: float = 0.7, top_k: int = 10, seed: int = datetime.now().timestamp()):
+def build_eval_dataset(model_path: str, workers: int, max_new_tokens: int = 200, temperature: float = 0.7, top_k: int = 10, seed: int = datetime.now().timestamp()):
     model_name = model_path.rstrip('/').split('/')[-1]
 
     output_path = os.path.join(os.path.dirname(__file__), "artifacts", "evaluation", f"{model_name}" ,  f"{datetime.now().strftime('%Y%m%d_%H%M%S')}", "ro_sentences.txt")
@@ -116,7 +116,7 @@ def build_eval_dataset(model_path: str, output_path: str, workers: int, max_new_
         part_files = [r.get() for r in results]
 
     # Merge parts in order
-    with open(args.output, "w", encoding="utf-8") as out_f:
+    with open(output_path, "w", encoding="utf-8") as out_f:
         for pf in part_files:
             with open(pf, "r", encoding="utf-8") as in_f:
                 for line in in_f:
@@ -130,7 +130,7 @@ def build_eval_dataset(model_path: str, output_path: str, workers: int, max_new_
 def main():
     args = parse_args()
 
-    build_eval_dataset(args.model, args.workers, args.max_new_tokens, args.temperature, args.top_k, args.seed)
+    build_eval_dataset(model_path=args.model, workers=args.workers, max_new_tokens=args.max_new_tokens, temperature=args.temperature, top_k=args.top_k, seed=args.seed)
 
 
 if __name__ == "__main__":

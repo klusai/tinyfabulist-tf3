@@ -70,7 +70,6 @@ def check_agreement(sentence):
             if parse_feats(word.feats).get("VerbForm") == "Part":
                 msg = check_agreement_feats(word, head, ["Gender", "Number"])
                 if msg:
-                    print(word.text, head.text, "Participle–Noun", msg)
                     errors.append((word.text, head.text, "Participle–Noun", msg))
 
     return errors
@@ -86,15 +85,25 @@ def compute_agree_stats(texts: List[str], file: str = None):
 
     if texts:
         for text in texts:
+            # remove first and last sentence
+            text = text.split(".")[1:-1]
+            text = "\n".join(text)
+
             doc = nlp(text)
             for sent in doc.sentences:
                 dataset_stats["total_sentences"] += 1
+
                 mistakes = len(check_agreement(sent))
                 dataset_stats["total_mistakes"] += mistakes
     elif file:
         with open(file, "r", encoding="utf-8") as f:
             for text in f:
+                # remove first and last sentence
+                text = text.split(".")[1:-1]
+                text = "\n".join(text)
+                
                 doc = nlp(text)
+
                 for sent in doc.sentences:
                     dataset_stats["total_sentences"] += 1
                     mistakes = len(check_agreement(sent))

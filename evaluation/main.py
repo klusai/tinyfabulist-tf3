@@ -8,6 +8,7 @@ from tf3.evaluation.general_metrics import compute_ce_ppl, load_texts
 import argparse
 from tf3.logger import get_logger
 from tf3.evaluation.agree_eval import compute_agree_stats
+from tf3.evaluation.throughtput import test_throughput
 
 ARTIFACTS_FOLDER = "tf3/evaluation/artifacts"
 CHECKPOINTS_FOLDER = "tf3/artifacts/training"
@@ -40,7 +41,7 @@ def get_all_checkpoints(folder_name: str) -> List[str]:
     subfolders = get_all_subfolders(folder_name)
     return list(filter(lambda x: x.split("/")[-1].startswith("mamba") and "checkpoint" in x, subfolders))
 
-def main(agree_stats: bool = False, cross_entropy: bool = True):
+def main(agree_stats: bool = False, cross_entropy: bool = True, throughput: bool = False):
     console_logger.info(f"Processing {ARTIFACTS_FOLDER}")   
     for checkpoint in get_all_checkpoints(CHECKPOINTS_FOLDER):
         console_logger.info(f"Processing {checkpoint}")
@@ -93,6 +94,11 @@ def main(agree_stats: bool = False, cross_entropy: bool = True):
             agree_stats = compute_agree_stats(texts)
             artifacts_logger.info(f"{checkpoint.split('/')[-1]}, Agree: {agree_stats['agree']:.4f}")
 
+        if throughput:
+            print(f"Testing throughput for {checkpoint}")
+            throughput = test_throughput(checkpoint, device)
+            artifacts_logger.info(f"{checkpoint.split('/')[-1]}, Throughput: {throughput:.4f}")
+
 
 if __name__ == "__main__":
-    main(agree_stats=True, cross_entropy=False)
+    main(agree_stats=False, cross_entropy=False, throughput=True)

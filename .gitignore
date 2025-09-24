@@ -2,3 +2,9 @@ artifacts/
 .venv/
 mamba50M*/
 __pycache__/
+wandb/
+.txt
+.conll
+ner_dataset/
+ner_dataset_tokenized/
+bert-ner-model/

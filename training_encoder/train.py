@@ -43,6 +43,8 @@ training_args = TrainingArguments(
     greater_is_better=False,
     fp16=True,
     report_to="wandb",
+    warmup_ratio=0.1,
+    label_smoothing_factor=0.1,
 )
 
 trainer = Trainer(

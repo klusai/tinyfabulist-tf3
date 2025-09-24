@@ -3,8 +3,8 @@ artifacts/
 mamba50M*/
 __pycache__/
 wandb/
-.txt
-.conll
+*.txt
+*.conll
 ner_dataset/
 ner_dataset_tokenized/
 bert-ner-model/

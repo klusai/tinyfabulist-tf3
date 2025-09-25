@@ -1,14 +1,15 @@
 import time
+
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 # load model + tokenizer
+
 
 def test_throughput(model_path: str, device: str):
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     model = AutoModelForCausalLM.from_pretrained(
-        model_path,
-        torch_dtype=torch.bfloat16
+        model_path, torch_dtype=torch.bfloat16
     ).to(device)
 
     # example prompt

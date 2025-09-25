@@ -1,18 +1,25 @@
 import os
 import re
-from typing import Dict, Tuple, List
+from typing import Dict, List, Tuple
+
 import matplotlib.pyplot as plt
 
-LOG_FILES = ['tf3.log', 'artifacts.log', 'tf3.log.2025-09-22']
-APPENDED_LOG_FILE_TEMP = 'appended_log.log'
+LOG_FILES = ["tf3.log", "artifacts.log", "tf3.log.2025-09-22"]
+APPENDED_LOG_FILE_TEMP = "appended_log.log"
 
 for log_file in LOG_FILES:
-    LOG_FILE = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")), "artifacts", "logs", log_file)
+    LOG_FILE = os.path.join(
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..")),
+        "artifacts",
+        "logs",
+        log_file,
+    )
     with open(LOG_FILE, "r", encoding="utf-8") as f:
         lines = f.readlines()
         for line in lines:
             with open(APPENDED_LOG_FILE_TEMP, "a", encoding="utf-8") as f_appended:
                 f_appended.write(line)
+
 
 def parse_log(file_path: str) -> Dict[int, Dict[str, float]]:
     """Parse tf3.log to collect CE, PPL, Agree, and Throughput per step.
@@ -73,7 +80,9 @@ def parse_log(file_path: str) -> Dict[int, Dict[str, float]]:
     return step_to_metrics
 
 
-def build_series(step_to_metrics: Dict[int, Dict[str, float]]) -> Tuple[List[int], List[float], List[float], List[float], List[float]]:
+def build_series(
+    step_to_metrics: Dict[int, Dict[str, float]],
+) -> Tuple[List[int], List[float], List[float], List[float], List[float]]:
     """Build sorted series of steps, CE, PPL, Agree, Throughput (NaN if missing)."""
     steps = sorted(step_to_metrics.keys())
     ce_series: List[float] = []
@@ -101,13 +110,15 @@ def main() -> None:
     fig, (ax_main, ax_tp) = plt.subplots(2, 1, figsize=(9, 7), sharex=True)
 
     # Main metrics plot (CE/PPL left, Agree right)
-    line_ce, = ax_main.plot(steps, ce, marker="o", label="Cross-Entropy (CE)")
-    line_ppl, = ax_main.plot(steps, ppl, marker="s", label="Perplexity (PPL)")
+    (line_ce,) = ax_main.plot(steps, ce, marker="o", label="Cross-Entropy (CE)")
+    (line_ppl,) = ax_main.plot(steps, ppl, marker="s", label="Perplexity (PPL)")
     ax_main.set_ylabel("CE / PPL")
     ax_main.grid(True, which="both", linestyle="--", alpha=0.4)
 
     ax_agree = ax_main.twinx()
-    line_agree, = ax_agree.plot(steps, agree, color="#d62728", marker="^", label="Agree")
+    (line_agree,) = ax_agree.plot(
+        steps, agree, color="#d62728", marker="^", label="Agree"
+    )
     ax_agree.set_ylabel("Agree")
 
     # Combine legends from both axes (top subplot)
@@ -117,7 +128,9 @@ def main() -> None:
     ax_main.set_title("Training Metrics vs Checkpoints (CE, PPL, Agree)")
 
     # Throughput subplot
-    line_tp, = ax_tp.plot(steps, throughput, color="#2ca02c", marker="d", label="Throughput")
+    (line_tp,) = ax_tp.plot(
+        steps, throughput, color="#2ca02c", marker="d", label="Throughput"
+    )
     ax_tp.set_xlabel("Checkpoint (Step)")
     ax_tp.set_ylabel("Throughput (tokens/sec)")
     ax_tp.grid(True, which="both", linestyle="--", alpha=0.4)

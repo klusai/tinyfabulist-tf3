@@ -7,18 +7,16 @@ Tokenize the dataset
 
 this tokenization will force to use aggregation strategy to be first.
 """
-from transformers import AutoTokenizer
-import evaluate
+
 import datasets
+import evaluate
 from labels import get_labels
+from transformers import AutoTokenizer
+
 
 def tokenize_and_align_labels(data, tokenizer, labels):
-    tokenized = tokenizer(
-        data["tokens"],  
-        truncation=True,
-        is_split_into_words=True
-    )
-    
+    tokenized = tokenizer(data["tokens"], truncation=True, is_split_into_words=True)
+
     labels_aligned = []
     for i, label in enumerate(data["ner_tags"]):
         word_ids = tokenized.word_ids(batch_index=i)
@@ -27,7 +25,9 @@ def tokenize_and_align_labels(data, tokenizer, labels):
         for word_id in word_ids:
             if word_id is None:
                 aligned.append(-100)  # ignored in loss
-            elif word_id != previous_word: #only first token of the word is tagged, rest are -100
+            elif (
+                word_id != previous_word
+            ):  # only first token of the word is tagged, rest are -100
                 aligned.append(label[word_id])
             else:
                 aligned.append(-100)  # mask subword continuations
@@ -36,6 +36,7 @@ def tokenize_and_align_labels(data, tokenizer, labels):
 
     tokenized["labels"] = labels_aligned
     return tokenized
+
 
 def tokenize_dataset(ner_dataset, hf_dataset):
     labels, label2id, id2label = get_labels()
@@ -47,8 +48,14 @@ def tokenize_dataset(ner_dataset, hf_dataset):
     # Load the dataset
     dataset = datasets.load_from_disk(ner_dataset)
     if len(dataset) == 0:
-        raise ValueError(f"Loaded dataset at {ner_dataset} has 0 examples. Aborting tokenization.")
-    tokenized_datasets = dataset.map(tokenize_and_align_labels, batched=True, fn_kwargs={"tokenizer": tokenizer, "labels": labels})
+        raise ValueError(
+            f"Loaded dataset at {ner_dataset} has 0 examples. Aborting tokenization."
+        )
+    tokenized_datasets = dataset.map(
+        tokenize_and_align_labels,
+        batched=True,
+        fn_kwargs={"tokenizer": tokenizer, "labels": labels},
+    )
 
     # Remove text columns the model can't handle
     tokenized_datasets = tokenized_datasets.remove_columns(["tokens", "ner_tags"])

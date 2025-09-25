@@ -1,21 +1,27 @@
-from transformers import AutoTokenizer, AutoModelForTokenClassification, DataCollatorForTokenClassification, TrainingArguments, Trainer, EarlyStoppingCallback
-from labels import get_labels
 import datasets
+from labels import get_labels
+from transformers import (
+    AutoModelForTokenClassification,
+    AutoTokenizer,
+    DataCollatorForTokenClassification,
+    EarlyStoppingCallback,
+    Trainer,
+    TrainingArguments,
+)
 
 model_checkpoint = "bert-base-multilingual-cased"
 
 tokenizer = AutoTokenizer.from_pretrained(model_checkpoint, use_fast=True)
 
 tokenized_datasets = datasets.load_from_disk("training_encoder/ner_dataset_tokenized/")
-train_dataset, eval_dataset = tokenized_datasets.train_test_split(test_size=0.1).values()
+train_dataset, eval_dataset = tokenized_datasets.train_test_split(
+    test_size=0.1
+).values()
 
 labels, label2id, id2label = get_labels()
 
 model = AutoModelForTokenClassification.from_pretrained(
-    model_checkpoint,
-    num_labels=len(labels),
-    id2label=id2label,
-    label2id=label2id
+    model_checkpoint, num_labels=len(labels), id2label=id2label, label2id=label2id
 )
 
 data_collator = DataCollatorForTokenClassification(tokenizer=tokenizer)

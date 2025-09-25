@@ -1,10 +1,12 @@
-import re
-from datasets import load_dataset
 import os
+import re
+
+from datasets import load_dataset
+
 
 def split_sentences(text: str):
     # Simple Romanian-friendly split
-    sentences = re.split(r'(?<=[\.\!\?])\s+', text.strip())
+    sentences = re.split(r"(?<=[\.\!\?])\s+", text.strip())
     return [s for s in sentences if s]
 
 

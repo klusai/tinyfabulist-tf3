@@ -1,9 +1,11 @@
-import spacy
 from collections import defaultdict
+
+import spacy
 
 nlp = spacy.load("ro_core_news_sm")  # Romanian model
 
 from collections import Counter
+
 
 def entity_recurrence_score(texts):
     """
@@ -27,7 +29,6 @@ def entity_recurrence_score(texts):
     repeated_mentions = sum(entity_counts.values()) - len(entity_counts)
 
     print(entity_counts, repeated_mentions, total_mentions)
-
 
     return repeated_mentions / total_mentions
 

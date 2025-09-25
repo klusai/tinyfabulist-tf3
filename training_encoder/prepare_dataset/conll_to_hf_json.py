@@ -3,8 +3,9 @@ Transform conll dataset to hf dataset
 """
 
 import datasets
+from datasets import ClassLabel, Features, Sequence, Value
 from labels import get_labels
-from datasets import Features, Sequence, ClassLabel, Value
+
 
 def conll_to_hf_dataset(path, label2id):
     sentences = []
@@ -27,12 +28,17 @@ def conll_to_hf_dataset(path, label2id):
             tags.append(ner_tags)
 
     labels = sorted(label2id, key=label2id.get)
-    features = Features({
-        "tokens": Sequence(Value("string")),
-        "ner_tags": Sequence(ClassLabel(names=labels))
-    })
+    features = Features(
+        {
+            "tokens": Sequence(Value("string")),
+            "ner_tags": Sequence(ClassLabel(names=labels)),
+        }
+    )
 
-    return datasets.Dataset.from_dict({"tokens": sentences, "ner_tags": tags}, features=features)
+    return datasets.Dataset.from_dict(
+        {"tokens": sentences, "ner_tags": tags}, features=features
+    )
+
 
 def transform_conll_to_hf_dataset(ner_dataset, hf_dataset):
     _, label2id, _ = get_labels()

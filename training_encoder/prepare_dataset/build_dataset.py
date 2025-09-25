@@ -11,11 +11,13 @@ Build dataset from checkpoints and annotations
 """
 
 import os
-from typing import List
-import yaml
 import re
-import stanza
 import unicodedata
+from typing import List
+
+import stanza
+import yaml
+
 
 def strip_diacritics(text: str) -> str:
     """Remove diacritics by Unicode NFD normalization and dropping combining marks."""
@@ -38,7 +40,7 @@ def lemmatize_list(words, nlp):
 def get_all_subfolders(folder_name: str) -> List[str]:
     # Get all subfolders recursively
     subfolders = [f.path for f in os.scandir(folder_name) if f.is_dir()]
-    
+
     if len(subfolders) == 0:
         return [folder_name]
 
@@ -47,9 +49,11 @@ def get_all_subfolders(folder_name: str) -> List[str]:
         checkpoints.extend(get_all_subfolders(subfolder))
     return checkpoints
 
+
 def get_all_checkpoints_datasets(folder_name: str) -> List[str]:
     subfolders = get_all_subfolders(folder_name)
     return list(filter(lambda x: x.split("/")[-2].startswith("mamba"), subfolders))
+
 
 def build_merged_dataset(checkpoints: List[str], out_path: str):
     with open(out_path, "w") as f_out:  # overwrite existing file
@@ -62,6 +66,7 @@ def build_merged_dataset(checkpoints: List[str], out_path: str):
                     f_out.write(line)
     return out_path
 
+
 # Build NER dataset from merged dataset and annotations
 def build_ner_dataset(yaml_path: str, full_dataset_path: str, out_path: str):
     # Load your entity dictionary
@@ -71,7 +76,12 @@ def build_ner_dataset(yaml_path: str, full_dataset_path: str, out_path: str):
     entities = data["generator"]["features"]["characters"]
     locations = data["generator"]["features"]["settings"]
 
-    nlp = stanza.Pipeline("ro", processors="tokenize,pos,lemma", tokenize_pretokenized=False, verbose=False)
+    nlp = stanza.Pipeline(
+        "ro",
+        processors="tokenize,pos,lemma",
+        tokenize_pretokenized=False,
+        verbose=False,
+    )
 
     entities_lemma = [word.lower() for word in lemmatize_list(entities, nlp)]
     locations_lemma = [word.lower() for word in lemmatize_list(locations, nlp)]
@@ -92,7 +102,9 @@ def build_ner_dataset(yaml_path: str, full_dataset_path: str, out_path: str):
             token = word.text
             lemma = word.lemma.lower()
             lemma_norm = normalize_token(lemma)
-            pos = word.upos  # Universal POS tag (NOUN, VERB, ADP, etc.) - to fix polisemy problems
+            pos = (
+                word.upos
+            )  # Universal POS tag (NOUN, VERB, ADP, etc.) - to fix polisemy problems
 
             label = "O"
             if lemma_norm in entities_lemma_norm:
@@ -105,7 +117,6 @@ def build_ner_dataset(yaml_path: str, full_dataset_path: str, out_path: str):
 
             lines.append(f"{token}\t{label}")
         lines.append("")
-
 
     with open(out_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))

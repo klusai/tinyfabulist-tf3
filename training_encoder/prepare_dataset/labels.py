@@ -8,6 +8,7 @@ Get labels for the NER dataset
 - I-LOCATION: inside a location (continuation of the location)
 """
 
+
 def get_labels():
     labels = ["O", "B-ENTITY", "I-ENTITY", "B-LOCATION", "I-LOCATION"]
     label2id = {l: i for i, l in enumerate(labels)}

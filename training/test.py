@@ -5,10 +5,11 @@ checkpoint = "/home/andrei/Documents/Work/tf3/artifacts/training/checkpoints/mam
 
 tokenizer = AutoTokenizer.from_pretrained(checkpoint)
 
-# Run on GPU if available
-import torch
 import threading
 import time
+
+# Run on GPU if available
+import torch
 
 # Enable TF32 on CUDA for speed without big accuracy loss
 if torch.cuda.is_available():
@@ -37,19 +38,25 @@ streamer = TextIteratorStreamer(
     clean_up_tokenization_spaces=False,
 )
 
+
 # Token counter via StoppingCriteria
 class TokenCounter(StoppingCriteria):
     def __init__(self, start_len: int):
         self.start_len = start_len
         self.max_len_seen = start_len
-    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
+
+    def __call__(
+        self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs
+    ) -> bool:
         cur_len = input_ids.shape[1]
         if cur_len > self.max_len_seen:
             self.max_len_seen = cur_len
         return False
+
     @property
     def new_tokens(self) -> int:
         return int(self.max_len_seen - self.start_len)
+
 
 start_len = inputs["input_ids"].shape[1]
 counter = TokenCounter(start_len)
@@ -67,6 +74,7 @@ gen_kwargs = dict(
     stopping_criteria=[counter],
 )
 
+
 def _generate():
     with torch.inference_mode():
         if device == "cuda":
@@ -74,6 +82,7 @@ def _generate():
                 model.generate(**gen_kwargs)
         else:
             model.generate(**gen_kwargs)
+
 
 start_time = time.time()
 thread = threading.Thread(target=_generate)
@@ -90,6 +99,8 @@ elapsed = time.time() - start_time
 # Report throughput
 gen_tokens = max(0, counter.new_tokens)
 if elapsed > 0:
-    print(f"\n\nGenerated {gen_tokens} tokens in {elapsed:.2f}s ({gen_tokens/elapsed:.2f} tok/s)")
+    print(
+        f"\n\nGenerated {gen_tokens} tokens in {elapsed:.2f}s ({gen_tokens/elapsed:.2f} tok/s)"
+    )
 else:
     print(f"\n\nGenerated {gen_tokens} tokens (elapsed time too small to measure)")

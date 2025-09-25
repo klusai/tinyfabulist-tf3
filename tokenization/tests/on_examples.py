@@ -1,7 +1,9 @@
 from transformers import PreTrainedTokenizerFast
 
 # Load your trained tokenizer
-tokenizer = PreTrainedTokenizerFast(tokenizer_file="artifacts/ro_tokenizer_20250909122701.json")
+tokenizer = PreTrainedTokenizerFast(
+    tokenizer_file="artifacts/ro_tokenizer_20250909122701.json"
+)
 
 # Your Romanian fable
 text = """Bivolul posomorât și trecutul tocit

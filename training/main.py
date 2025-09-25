@@ -2,20 +2,23 @@
 This file contains the main function for training the model.
 """
 
-from transformers import TrainingArguments, Trainer, DataCollatorForLanguageModeling, EarlyStoppingCallback
-from transformers import PreTrainedTokenizerFast
 from datasets import load_from_disk
-from model import model   # Mamba model
+from model import model  # Mamba model
+from transformers import (
+    DataCollatorForLanguageModeling,
+    EarlyStoppingCallback,
+    PreTrainedTokenizerFast,
+    Trainer,
+    TrainingArguments,
+)
 
 OUTPUT_DIR = "checkpoints/mamba-50M"
 TOKENIZER_PATH = "artifacts/tokenizers_2025_09_10_11_05_41/unigram_tokenizer.json"
 DATASET_PATH = "artifacts/ds-tf2-en-ro-3m-tokenized"
 
-    
+
 # Load tokenizer
-tokenizer = PreTrainedTokenizerFast(
-    tokenizer_file=TOKENIZER_PATH
-)
+tokenizer = PreTrainedTokenizerFast(tokenizer_file=TOKENIZER_PATH)
 
 special_tokens = {
     "bos_token": "<bos>",
@@ -52,7 +55,9 @@ else:
     train_dataset = split["train"]
     eval_dataset = split["test"]
 
-collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False, pad_to_multiple_of=8)
+collator = DataCollatorForLanguageModeling(
+    tokenizer=tokenizer, mlm=False, pad_to_multiple_of=8
+)
 
 args = TrainingArguments(
     output_dir=OUTPUT_DIR,
@@ -81,8 +86,8 @@ args = TrainingArguments(
 
 # Add early stopping callback
 early_stopping = EarlyStoppingCallback(
-    early_stopping_patience=3,  
-    early_stopping_threshold=0.001,  
+    early_stopping_patience=3,
+    early_stopping_threshold=0.001,
 )
 
 trainer = Trainer(
@@ -92,7 +97,7 @@ trainer = Trainer(
     eval_dataset=eval_dataset,
     data_collator=collator,
     tokenizer=tokenizer,
-    callbacks=[early_stopping]
+    callbacks=[early_stopping],
 )
 
 trainer.train()

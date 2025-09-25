@@ -73,7 +73,11 @@ def configure_logger(level: int = logging.INFO, log_file: Optional[str] = None) 
     if not any(isinstance(h, TimedRotatingFileHandler) for h in root_logger.handlers):
         root_logger.addHandler(_create_file_handler(effective_log_file))
 
-    if not any(isinstance(h, logging.StreamHandler) and not isinstance(h, TimedRotatingFileHandler) for h in root_logger.handlers):
+    if not any(
+        isinstance(h, logging.StreamHandler)
+        and not isinstance(h, TimedRotatingFileHandler)
+        for h in root_logger.handlers
+    ):
         root_logger.addHandler(_create_stream_handler(level))
 
     root_logger.propagate = False
@@ -95,12 +99,14 @@ def get_logger(name: Optional[str] = None) -> logging.Logger:
 
 # Backward-compatible simple function
 
+
 def log(message: str) -> None:
     """Log a message at INFO level (backward compatible)."""
     get_logger().info(message)
 
 
 # Convenience wrappers
+
 
 def debug(message: str) -> None:
     get_logger().debug(message)
@@ -120,4 +126,4 @@ def error(message: str) -> None:
 
 def exception(message: str) -> None:
     """Log an exception with traceback. Call inside an except block."""
-    get_logger().exception(message)        
+    get_logger().exception(message)

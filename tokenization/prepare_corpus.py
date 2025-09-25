@@ -4,6 +4,14 @@ import re
 from datasets import load_dataset
 
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset_path", type=str, default="klusai/ds-tf2-en-ro-3m")
+    parser.add_argument("--output_file", type=str, default="ds-tf2-en-ro-3m.txt")
+    parser.add_argument("--output_dir", type=str, default="artifacts")
+    return parser.parse_args()
+
+
 def split_sentences(text: str):
     # Simple Romanian-friendly split
     sentences = re.split(r"(?<=[\.\!\?])\s+", text.strip())
@@ -29,4 +37,5 @@ def gen_corpus(out_file="ds-tf2-en-ro-3m.txt", out_dir="artifacts"):
 
 
 if __name__ == "__main__":
-    gen_corpus()
+    args = parse_args()
+    gen_corpus(args.output_path, args.dataset_path)

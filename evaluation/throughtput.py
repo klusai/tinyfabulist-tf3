@@ -3,10 +3,12 @@ import time
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-# load model + tokenizer
 
+def test_throughput(model_path: str, device: str, max_new_tokens: int = 1000):
+    """
+    Test the throughput of a model.
+    """
 
-def test_throughput(model_path: str, device: str):
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     model = AutoModelForCausalLM.from_pretrained(
         model_path, torch_dtype=torch.bfloat16
@@ -26,7 +28,6 @@ def test_throughput(model_path: str, device: str):
     _ = model.generate(**inputs, max_new_tokens=50, do_sample=False)
 
     # benchmark
-    max_new_tokens = 1000
     start = time.time()
 
     with torch.no_grad():

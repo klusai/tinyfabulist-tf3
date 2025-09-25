@@ -6,13 +6,19 @@ from typing import List
 import torch
 from tf3.evaluation.agree_eval import compute_agree_stats
 from tf3.evaluation.build_eval_dataset import build_eval_dataset
+from tf3.evaluation.entity_coherence import entity_coherence_score
 from tf3.evaluation.general_metrics import compute_ce_ppl, load_texts
 from tf3.evaluation.throughtput import test_throughput
 from tf3.logger import get_logger
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import (
+    AutoModelForCausalLM,
+    AutoModelForTokenClassification,
+    AutoTokenizer,
+)
 
 ARTIFACTS_FOLDER = "tf3/evaluation/artifacts"
 CHECKPOINTS_FOLDER = "tf3/artifacts/training"
+OUTPUT_PATH = "tf3/evaluation/artifacts/evaluation.log"
 
 console_logger = get_logger("evaluation")
 artifacts_logger = get_logger("artifacts")
@@ -52,7 +58,10 @@ def get_all_checkpoints(folder_name: str) -> List[str]:
 
 
 def main(
-    agree_stats: bool = False, cross_entropy: bool = True, throughput: bool = False
+    agree_stats: bool = False,
+    cross_entropy: bool = True,
+    throughput: bool = False,
+    entity_coherence: bool = False,
 ):
     console_logger.info(f"Processing {ARTIFACTS_FOLDER}")
     for checkpoint in get_all_checkpoints(CHECKPOINTS_FOLDER):
@@ -65,6 +74,10 @@ def main(
         model = AutoModelForCausalLM.from_pretrained(
             checkpoint, torch_dtype=torch_dtype
         ).to(device)
+
+        encoder_model_path = (
+            "/home/andrei/Documents/Work/tf3/bert-ner-model/checkpoint-3192"
+        )
 
         if os.path.exists(
             f"{ARTIFACTS_FOLDER}/evaluation/{checkpoint.split('/')[-1]}/"
@@ -105,6 +118,7 @@ def main(
         texts = load_texts(args)
 
         if cross_entropy:
+            console_logger.info(f"Computing CE and PPL for {checkpoint}")
             ce_all, ppl_all = compute_ce_ppl(
                 model=model,
                 tokenizer=tokenizer,
@@ -118,18 +132,28 @@ def main(
             )
 
         if agree_stats:
+            console_logger.info(f"Computing Agree for {checkpoint}")
             agree_stats = compute_agree_stats(texts)
             artifacts_logger.info(
                 f"{checkpoint.split('/')[-1]}, Agree: {agree_stats['agree']:.4f}"
             )
 
         if throughput:
-            print(f"Testing throughput for {checkpoint}")
+            console_logger.info(f"Computing Throughput for {checkpoint}")
             throughput = test_throughput(checkpoint, device)
             artifacts_logger.info(
                 f"{checkpoint.split('/')[-1]}, Throughput: {throughput:.4f}"
             )
 
+        if entity_coherence:
+            console_logger.info(f"Computing Entity Coherence for {checkpoint}")
+            entity_coherence = entity_coherence_score(texts, encoder_model_path)
+            artifacts_logger.info(
+                f"{checkpoint.split('/')[-1]}, Entity Coherence: {entity_coherence:.4f}"
+            )
+
 
 if __name__ == "__main__":
-    main(agree_stats=False, cross_entropy=False, throughput=True)
+    main(
+        agree_stats=False, cross_entropy=False, throughput=False, entity_coherence=True
+    )

@@ -1,15 +1,21 @@
+"""
+Build dataset from checkpoints and annotations
+
+1. Build merged dataset from checkpoints
+- each checkpoint has a file called ro_sentences.txt
+- merge all the files into one file
+2. Build NER dataset from merged dataset and annotations
+- load the annotations
+- lemmatize the entities and locations
+- build the NER dataset(conll file)
+"""
+
 import os
 from typing import List
 import yaml
 import re
 import stanza
 import unicodedata
-
-
-ARTIFACTS = "evaluation/artifacts/evaluation"
-FULL_DATASET = "training_encoder/full_dataset.txt"
-
-# Utilities for diacritics-insensitive matching
 
 def strip_diacritics(text: str) -> str:
     """Remove diacritics by Unicode NFD normalization and dropping combining marks."""
@@ -29,6 +35,34 @@ def lemmatize_list(words, nlp):
     return set([w.lemma.lower() for sent in doc.sentences for w in sent.words])
 
 
+def get_all_subfolders(folder_name: str) -> List[str]:
+    # Get all subfolders recursively
+    subfolders = [f.path for f in os.scandir(folder_name) if f.is_dir()]
+    
+    if len(subfolders) == 0:
+        return [folder_name]
+
+    checkpoints = []
+    for subfolder in subfolders:
+        checkpoints.extend(get_all_subfolders(subfolder))
+    return checkpoints
+
+def get_all_checkpoints_datasets(folder_name: str) -> List[str]:
+    subfolders = get_all_subfolders(folder_name)
+    return list(filter(lambda x: x.split("/")[-2].startswith("mamba"), subfolders))
+
+def build_merged_dataset(checkpoints: List[str], out_path: str):
+    with open(out_path, "w") as f_out:  # overwrite existing file
+        for checkpoint in checkpoints:
+            dataset_path = os.path.join(checkpoint, "ro_sentences.txt")
+            if not os.path.exists(dataset_path):
+                continue
+            with open(dataset_path, "r") as f_in:
+                for line in f_in:
+                    f_out.write(line)
+    return out_path
+
+# Build NER dataset from merged dataset and annotations
 def build_ner_dataset(yaml_path: str, full_dataset_path: str, out_path: str):
     # Load your entity dictionary
     with open(yaml_path, "r", encoding="utf-8") as f:
@@ -75,55 +109,3 @@ def build_ner_dataset(yaml_path: str, full_dataset_path: str, out_path: str):
 
     with open(out_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
-
-
-def get_all_subfolders(folder_name: str) -> List[str]:
-    # Get all subfolders recursively
-    subfolders = [f.path for f in os.scandir(folder_name) if f.is_dir()]
-    
-    if len(subfolders) == 0:
-        return [folder_name]
-
-    checkpoints = []
-    for subfolder in subfolders:
-        checkpoints.extend(get_all_subfolders(subfolder))
-    return checkpoints
-
-def get_all_checkpoints_datasets(folder_name: str) -> List[str]:
-    subfolders = get_all_subfolders(folder_name)
-    return list(filter(lambda x: x.split("/")[-2].startswith("mamba"), subfolders))
-
-
-def get_characters(folder_name: str) -> List[str]:
-    with open(folder_name + "/annotations.yaml", "r") as f:
-        yaml_data = yaml.load(f, Loader=yaml.FullLoader)
-    return yaml_data["generator"]["features"]["characters"]
-
-def build_full_dataset(checkpoints: List[str], out_path: str):
-    for checkpoint in checkpoints:
-        dataset_path = checkpoint + "/ro_sentences.txt"
-
-        if not os.path.exists(dataset_path):
-            continue
-
-        with open(dataset_path, "r") as f:
-            dataset = f.readlines()
-            with open(out_path, "a") as f_append:
-                for line in dataset:
-                    f_append.write(line)
-
-def build_anotated_dataset(full_dataset_path: str, out_path: str):
-    with open(full_dataset_path, "r") as f_full:
-        with open(out_path, "a") as f_append:
-            for line in f_full:
-                f_append.write(line)
-
-if __name__ == "__main__":
-    if not os.path.exists(FULL_DATASET):
-        build_full_dataset(get_all_checkpoints_datasets(ARTIFACTS), FULL_DATASET)
-    else:
-        print(f"Dataset {FULL_DATASET} already exists")
-
-    build_ner_dataset("training_encoder/annotations.yaml", FULL_DATASET, "training_encoder/ner_dataset.conll")
-
-    

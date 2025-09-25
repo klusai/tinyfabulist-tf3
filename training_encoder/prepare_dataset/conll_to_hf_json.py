@@ -1,9 +1,12 @@
+"""
+Transform conll dataset to hf dataset
+"""
+
 import datasets
+from labels import get_labels
+from datasets import Features, Sequence, ClassLabel, Value
 
-labels = ["O", "B-ENTITY", "I-ENTITY", "B-LOCATION", "I-LOCATION"]
-label2id = {l: i for i, l in enumerate(labels)}
-
-def read_conll(path):
+def conll_to_hf_dataset(path, label2id):
     sentences = []
     tags = []
     with open(path, encoding="utf-8") as f:
@@ -22,7 +25,18 @@ def read_conll(path):
         if tokens:  # last sentence
             sentences.append(tokens)
             tags.append(ner_tags)
-    return datasets.Dataset.from_dict({"tokens": sentences, "ner_tags": tags})
 
-dataset = read_conll("training_encoder/ner_dataset.conll")
-dataset.save_to_disk("training_encoder/ner_dataset")
+    labels = sorted(label2id, key=label2id.get)
+    features = Features({
+        "tokens": Sequence(Value("string")),
+        "ner_tags": Sequence(ClassLabel(names=labels))
+    })
+
+    return datasets.Dataset.from_dict({"tokens": sentences, "ner_tags": tags}, features=features)
+
+def transform_conll_to_hf_dataset(ner_dataset, hf_dataset):
+    _, label2id, _ = get_labels()
+
+    # transform conll dataset to hf dataset
+    dataset = conll_to_hf_dataset(ner_dataset, label2id)
+    dataset.save_to_disk(hf_dataset)

@@ -1,5 +1,6 @@
 import argparse
 from collections import Counter
+import math
 from typing import Dict, List
 
 import stanza
@@ -12,7 +13,7 @@ def parse_args():
     parser.add_argument(
         "--text",
         type=str,
-        default="Un iepure blând a sugerat: „Haideți să lucrăm împreună ca să construim o casă nouă pentru iepure, iar ea va fi atât de fericită încât va putea să se joace cu noi.” Dar iepurele a refuzat, spunând: „Nu, o voi face singur. Nu am nevoie de ajutorul nimănui.” Iepurele a încercat să o convingă, dar ea nu a vrut să asculte. Pe măsură ce treceau zilele, iepurele a observat că celelalte animale au început să se certe și să se lupte. Iepurele și-a dat seama că, fără ajutorul lor, nu mai avea cu cine să se joace. Într-o zi, iepurele a avut o idee. „Haideți să construim o casă nouă pentru toți, iar eu voi ajuta la construirea unei noi case pentru o familie de păsări.” Celelalte animale au fost de acord, iar împreună au ridicat o casă frumoasă și primitoare. Iepurele a învățat că, atunci când îi ajuți pe ceilalți, și ei te vor ajuta. Din acea zi, iepurele a fost cunoscut drept cel mai bun iepure din pădure. Iar ori de câte ori animalele aveau nevoie de ajutor, știau că se pot baza pe iepurele bun care îi ajutase. Morala poveștii este: Ajutorul la timp aduce loialitate de durată. Într-o poiană însorită, plină de flori colorate, trăia o mică buburuză pe nume Inimă Bună. Îi plăcea să zboare de la o floare la alta, adunând nectar pentru prietenii ei. Într-o zi, în timp ce sorbea dintr-o floare galbenă strălucitoare, Inimă Bună a întâlnit un fluture frumos numit Aripi Blânde. S-au îndrăgostit, iar Inimă Bună a crezut că ar fi cel mai bun prieten al ei. Dar, pe măsură ce trecea timpul, Inimă Bună a început să se simtă tristă și singură. Îi era dor de Aripi Blânde și voia să fie cu ea, dar nu știa cum. A început să se gândească: „De ce nu pot fi prietenă cu Aripi Blânde? E atât de frumoasă și de puternică.” Inimă Bună a început să se poarte urât cu Aripi Blânde, încercând să o facă să se simtă rău. Dar Aripi Blânde nu a renunțat. A continuat să zboare și să se joace cu Inimă Bună, iar curând au devenit cei mai buni prieteni. Într-o zi, în timp ce Inimă Bună zbura, a văzut un grup de fluturi care se chinuiau să găsească nectar în poiană. A",
+        default="koala somnoroasă  îi plăcea să exploreze și să se joace cu prietenii ei. Dar într-o zi, în timp ce se încălzea la soare, a întâlnit un iepure blând care i-a spus: „Bună, micuțo! De ce ești atât de tristă?” Koala a răspuns: „Mi-aș dori să pot fi la fel de fericită ca iepurele. Aș vrea să pot să alerg ca ea.” Iepurele a zâmbit și a spus: „Dar fiecare este bun la ceva. Ești bună la ceva?” Koala s-a gândit o clipă și a spus: „Da, mi-ar plăcea!” Iepurele a zâmbit și a spus: „Atunci de ce vrei să fii ca mine?” Koala a zâmbit înapoi, simțindu-se fericită și încrezătoare. În timp ce se jucau împreună, a apărut o vulpe șireată. Vulpea a spus: „Hei, prieteni! Vă voi ajuta să găsiți cele mai gustoase fructe de pădure din pădure. Dar vă rog să mă credeți!” Iepurele și koala ",
     )
     return parser.parse_args()
 
@@ -38,25 +39,19 @@ def group_entities_based_on_base_form(entities: List[Dict]):
 
 def entity_coherence_score(texts, model):
     """
-    Score how much entities are repeated across a set of texts.
-    High score = entities are reused frequently (coherent).
-    Low score = entities mostly appear once (incoherent).
+    High score when entity mentions are balanced (uniform).
+    Low score when dominated by a single entity.
     """
 
     tokenizer = AutoTokenizer.from_pretrained(model)
     model = AutoModelForTokenClassification.from_pretrained(model)
 
-    # Create inference pipeline
     ner_pipeline = pipeline(
         "ner", model=model, tokenizer=tokenizer, aggregation_strategy="first"
     )
 
-    # Build a Romanian lemmatizer once
     nlp = stanza.Pipeline(
-        "ro",
-        processors="tokenize,pos,lemma",
-        tokenize_pretokenized=False,
-        verbose=False,
+        "ro", processors="tokenize,pos,lemma", verbose=False
     )
 
     def lemmatize_token(token: str) -> str:
@@ -67,27 +62,28 @@ def entity_coherence_score(texts, model):
         return token.lower()
 
     lemma_counts = Counter()
-    total_mentions = 0
 
     for text in texts:
         entities = ner_pipeline(text)
         for ent in entities:
-            lemma = lemmatize_token(ent["word"])  # robust to different surface forms
+            lemma = lemmatize_token(ent["word"])
             lemma_counts[lemma] += 1
-            total_mentions += 1
 
-    if total_mentions == 0:
-        return 1.0  # no entities = trivially coherent
+    total = sum(lemma_counts.values())
+    if total == 0:
+        return 1.0  # no entities = trivially "balanced"
 
-    print(lemma_counts)
+    # Shannon entropy
+    probs = [c / total for c in lemma_counts.values()]
+    entropy = -sum(p * math.log(p, 2) for p in probs)
 
-    # Reward repetitions: only counts beyond the first mention of each lemma
-    repeated_mentions = sum(lemma_counts.values()) - len(lemma_counts)
-
-    return repeated_mentions / total_mentions
+    # Normalize: entropy / max_entropy (log2 of #entities)
+    max_entropy = math.log(len(probs), 2) if len(probs) > 1 else 1
+    score = entropy / max_entropy
+    return score
 
 
 if __name__ == "__main__":
     args = parse_args()
     score = entity_coherence_score([args.text], args.model)
-    print(f"Entity Coherence Score: {score:.3f}")
+    print(f"Entity Coherence Score: {score:3f}")

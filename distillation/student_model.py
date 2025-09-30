@@ -1,16 +1,16 @@
 """
-This file contains the model definition for the model.
+This file contains the definition for the student model.
 """
 
 from transformers import MambaConfig, MambaForCausalLM
 
 config = MambaConfig(
     vocab_size=32000,
-    hidden_size=512,  # was d_model
-    num_hidden_layers=18,  # was n_layer
-    state_size=64,  # keep default or increase a bit
-    expand=2,
-    conv_kernel=4,
+    hidden_size=128,        # smaller embedding & hidden size
+    num_hidden_layers=6,    # fewer layers
+    state_size=64,          # keep default
+    expand=2,               # same
+    conv_kernel=4           # same
 )
 
 model = MambaForCausalLM(config)

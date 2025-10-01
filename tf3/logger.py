@@ -92,7 +92,7 @@ def get_logger(name: Optional[str] = None) -> logging.Logger:
         get_logger("training") -> "tf3.training"
     """
     if not _configured:
-        configure_logger()
+        configure_logger(log_file=f"{_LOG_DIR}/{name}.log")
     logger_name = _MODULE_LOGGER_NAME if not name else f"{_MODULE_LOGGER_NAME}.{name}"
     return logging.getLogger(logger_name)
 

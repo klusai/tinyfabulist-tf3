@@ -9,7 +9,7 @@ from torch.optim import AdamW
 
 # Import models
 from tf3.distillation.student_model import model as student
-from tf3.training.model import model as teacher  
+from tf3.training.mamba.model import model as teacher  
 
 # ---- Parse args ----
 def parse_args() -> argparse.Namespace:

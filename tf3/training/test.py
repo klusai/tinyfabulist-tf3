@@ -10,7 +10,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--checkpoint",
         type=str,
-        default="tf3/artifacts/training/checkpoints/mamba50MF/checkpoint-28200",
+        default="/run/media/andrei/MYUSB/tf3_checkpoints/llama-50M/checkpoint-23225/",
     )
     parser.add_argument("--prompt", type=str, default="Un iepure")
     return parser.parse_args()

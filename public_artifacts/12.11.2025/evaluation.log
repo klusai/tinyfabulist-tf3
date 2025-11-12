@@ -1,0 +1,32 @@
+2025-11-12 16:28:32 INFO [tf3.evaluation] Processing tf3/evaluation/artifacts
+2025-11-12 16:28:32 INFO [tf3.evaluation] Processing klusai/tf3-50m-base
+2025-11-12 16:28:34 INFO [tf3.evaluation] Building Evaluation Dataset for klusai/tf3-50m-base
+2025-11-12 16:29:07 INFO [tf3.evaluation] Processing /Users/andreip/tf3/tf3/evaluation/artifacts/evaluation/tf3-50m-base/20251112_162834/ro_sentences.txt
+2025-11-12 16:29:07 INFO [tf3.evaluation] Computing CE and PPL for klusai/tf3-50m-base
+2025-11-12 16:29:07 INFO [tf3.artifacts] tf3-50m-base, CE: 0.8747, PPL: 2.3982
+2025-11-12 16:29:20 INFO [tf3.evaluation] Computing Entity Coherence for klusai/tf3-50m-base
+2025-11-12 16:29:32 INFO [tf3.artifacts] tf3-50m-base, Entity Coherence: 0.9025
+2025-11-12 16:29:32 INFO [tf3.evaluation] Computing LanguageTool Grammar Score for klusai/tf3-50m-base
+2025-11-12 16:29:38 INFO [tf3.artifacts] tf3-50m-base, LanguageTool: 0.9896
+2025-11-12 16:29:38 INFO [tf3.evaluation] Computing LLM Grammar Score for klusai/tf3-50m-base
+2025-11-12 16:29:54 INFO [tf3.artifacts] tf3-50m-base, LLM Grammar: 92.0000
+2025-11-12 16:29:54 INFO [tf3.evaluation] Processing klusai/tf3-50m-base-mamba
+2025-11-12 16:29:56 INFO [tf3.evaluation] Building Evaluation Dataset for klusai/tf3-50m-base-mamba
+2025-11-12 16:30:39 INFO [tf3.evaluation] Processing /Users/andreip/tf3/tf3/evaluation/artifacts/evaluation/tf3-50m-base-mamba/20251112_162956/ro_sentences.txt
+2025-11-12 16:30:39 INFO [tf3.evaluation] Computing CE and PPL for klusai/tf3-50m-base-mamba
+2025-11-12 16:30:46 INFO [tf3.artifacts] tf3-50m-base-mamba, CE: 0.9469, PPL: 2.5778
+2025-11-12 16:30:57 INFO [tf3.evaluation] Computing Entity Coherence for klusai/tf3-50m-base-mamba
+2025-11-12 16:31:07 INFO [tf3.artifacts] tf3-50m-base-mamba, Entity Coherence: 0.8894
+2025-11-12 16:31:07 INFO [tf3.evaluation] Computing LanguageTool Grammar Score for klusai/tf3-50m-base-mamba
+2025-11-12 16:31:15 INFO [tf3.artifacts] tf3-50m-base-mamba, LanguageTool: 0.9851
+2025-11-12 16:31:15 INFO [tf3.evaluation] Computing LLM Grammar Score for klusai/tf3-50m-base-mamba
+2025-11-12 16:31:32 INFO [tf3.artifacts] tf3-50m-base-mamba, LLM Grammar: 85.0000
+2025-11-12 16:34:23 INFO [tf3.evaluation] Processing tf3/evaluation/artifacts
+2025-11-12 17:04:11 INFO [tf3.evaluation] Processing /Users/andreip/tf3/tf3/evaluation/artifacts/evaluation/tf3-50m-base/20251112_162834/ro_sentences.txt
+2025-11-12 17:04:11 INFO [tf3.evaluation] Computing Throughput for klusai/tf3-50m-base
+2025-11-12 17:04:18 INFO [tf3.artifacts] tf3-50m-base, Throughput: 8780.7232
+2025-11-12 17:04:18 INFO [tf3.evaluation] Processing klusai/tf3-50m-base-mamba
+2025-11-12 17:04:19 INFO [tf3.evaluation] Skipping klusai/tf3-50m-base-mamba because it already exists
+2025-11-12 17:04:19 INFO [tf3.evaluation] Processing /Users/andreip/tf3/tf3/evaluation/artifacts/evaluation/tf3-50m-base-mamba/20251112_162956/ro_sentences.txt
+2025-11-12 17:04:19 INFO [tf3.evaluation] Computing Throughput for klusai/tf3-50m-base-mamba
+2025-11-12 17:04:29 INFO [tf3.artifacts] tf3-50m-base-mamba, Throughput: 6573.4879

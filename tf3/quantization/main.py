@@ -20,6 +20,8 @@ def quantize_model(model_path: str):
         device_map="auto"
     )
 
+    return model
+
 
 if __name__ == "__main__":
     args = parse_args()

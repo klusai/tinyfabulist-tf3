@@ -152,8 +152,8 @@ def worker(
     if torch.cuda.is_available():
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.allow_tf32 = True
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dtype = torch.bfloat16 if device.type == "cuda" else None
+    device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+    dtype = torch.bfloat16 if device.type == "cuda" or device.type == "mps" else None
 
     # Unique seed per worker
     torch.manual_seed(seed + rank)
@@ -171,7 +171,7 @@ def worker(
             if "token_type_ids" in enc:
                 enc.pop("token_type_ids")
             with torch.inference_mode():
-                if device.type == "cuda":
+                if device.type == "cuda" or device.type == "mps":
                     with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
                         out = model.generate(
                             **enc,

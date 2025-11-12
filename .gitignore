@@ -8,3 +8,5 @@ wandb/
 ner_dataset/
 ner_dataset_tokenized/
 bert-ner-model/
+.env
+mlx_cache/

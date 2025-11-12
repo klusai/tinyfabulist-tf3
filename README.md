@@ -49,3 +49,10 @@ Outputs:
 - Hugging Face Datasets/Transformers/Tokenizers
 - Google SentencePiece
 - Community datasets for Romanian text
+
+## Todo
+- mamba vs transformers benchmarks
+- quantization benchmarks 
+- ablation studies
+- finetuning 
+- generate 3M fables

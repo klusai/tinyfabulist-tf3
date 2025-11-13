@@ -22,7 +22,7 @@ def test_throughput(
     device: str,
     max_new_tokens: int = 2000,
     batch_size: int = 30,
-    prompt_tokens: int = 32,
+    prompt_tokens: int = 4,
     trust_remote_code: bool = False,
 ):
     """
@@ -34,17 +34,29 @@ def test_throughput(
     
     # Use get_model_path to handle both local paths and HF repos
     if MLX_AVAILABLE:
-        model_path_actual = Path("./mlx_cache/" + model_path.split("/")[-1] + "-mlx/")
-        print(model_path_actual)
-        model, config = load(model_path_actual)
+        # Convert to absolute path for local models
+        model_path_actual = Path(model_path).resolve()
+        print(f"Loading MLX model from: {model_path_actual}")
+        # load() expects a string, and absolute path indicates it's local
+        model, config = load(str(model_path_actual))
         tokenizer = load_tokenizer(
-            model_path_actual,
+            model_path_actual,  # load_tokenizer expects a Path object
             eos_token_ids=[],  # disable early stop
             tokenizer_config_extra={"trust_remote_code": trust_remote_code},
         )
 
-        # Random batch of prompts as token ids: List[List[int]] of shape [batch_size, prompt_len]
-        prompts = mx.random.randint(0, 200, (batch_size, prompt_tokens)).tolist()
+        prompts = []
+
+        # Single prompt as text
+        prompt_text = "Iepurele si"
+
+        # Tokenize into a list of ints
+        prompt_ids = tokenizer.encode(prompt_text)
+
+        # Repeat for batch size
+        for _ in range(batch_size):
+            prompts.append(prompt_ids)
+
         
         # Benchmark generation
         start = time.perf_counter()

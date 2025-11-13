@@ -7,7 +7,7 @@ import torch
 from tf3.evaluation.build_eval_dataset import build_eval_dataset
 from tf3.evaluation.entity_coherence import entity_coherence_score
 from tf3.evaluation.general_metrics import compute_ce_ppl, load_texts
-from tf3.evaluation.llm import llm_grammar_score
+from tf3.evaluation.llm import llm_grammar_score, llm_grammar_score_detailed
 from tf3.evaluation.lang_tool import language_tool_score
 from tf3.evaluation.throughtput import test_throughput
 from tf3.logger import get_logger
@@ -17,8 +17,16 @@ from transformers import (
     AutoTokenizer,
 )
 
+try:
+    from mlx_lm import load as mlx_load
+    MLX_AVAILABLE = True
+    print(f"MLX available")
+except ImportError:
+    MLX_AVAILABLE = False
+    print("MLX not available")
+
 ARTIFACTS_FOLDER = "tf3/evaluation/artifacts"
-CHECKPOINTS = ['klusai/tf3-50m-base', 'klusai/tf3-50m-base-mamba'] #"tf3/artifacts/training"
+CHECKPOINTS = ["mlx_cache/tf3-50m-base-q6-mlx"] #"tf3/artifacts/training"
 OUTPUT_PATH = "tf3/evaluation/artifacts/evaluation.log"
 
 
@@ -68,14 +76,22 @@ def main(
     console_logger.info(f"Processing {ARTIFACTS_FOLDER}")
     for checkpoint in get_all_checkpoints(CHECKPOINTS):
         console_logger.info(f"Processing {checkpoint}")
-        device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
-
-        tokenizer = AutoTokenizer.from_pretrained(checkpoint)
-        # Prefer bf16 on GPU capable hardware
-        torch_dtype = torch.bfloat16 if device.type == "cuda" or device.type == "mps" else None
-        model = AutoModelForCausalLM.from_pretrained(
-            checkpoint, torch_dtype=torch_dtype
-        ).to(device)
+        
+        # Check if this is an MLX model
+        is_mlx_model = "mlx" in checkpoint.lower()
+        
+        if is_mlx_model and MLX_AVAILABLE:
+            console_logger.info(f"Loading MLX model from {checkpoint}")
+            model, tokenizer = mlx_load(checkpoint)
+            device = None  # MLX doesn't use torch.device
+        else:
+            device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+            tokenizer = AutoTokenizer.from_pretrained(checkpoint)
+            # Prefer bf16 on GPU capable hardware
+            torch_dtype = torch.bfloat16 if device.type == "cuda" or device.type == "mps" else None
+            model = AutoModelForCausalLM.from_pretrained(
+                checkpoint, torch_dtype=torch_dtype
+            ).to(device)
 
         encoder_model_path = (
             "klusai/tf3-bert"
@@ -135,9 +151,12 @@ def main(
 
         if throughput:
             console_logger.info(f"Computing Throughput for {checkpoint}")
-            throughput = test_throughput(checkpoint, device)
+            device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+            console_logger.info(f"Device: {device if device is not None else 'CPU'}")
+            # For MLX models, device is None, but test_throughput handles it
+            throughput_val = test_throughput(checkpoint, device if device is not None else "cpu")
             artifacts_logger.info(
-                f"{checkpoint.split('/')[-1]}, Throughput: {throughput:.4f}"
+                f"{checkpoint.split('/')[-1]}, Throughput: {throughput_val:.4f}"
             )
 
         if entity_coherence:
@@ -157,9 +176,13 @@ def main(
         if llm_grammar:
             console_logger.info(f"Computing LLM Grammar Score for {checkpoint}")
             try:
-                llm_score = llm_grammar_score(texts)
+                llm_result = llm_grammar_score_detailed(texts)
+                fluency = llm_result.get("fluency", 0.0)
+                coherence = llm_result.get("coherence", 0.0)
+                mistakes = llm_result.get("total_mistakes", 0)
+                avg_score = llm_result.get("average_score", 0.0)
                 artifacts_logger.info(
-                    f"{checkpoint.split('/')[-1]}, LLM Grammar: {llm_score:.4f}"
+                    f"{checkpoint.split('/')[-1]}, LLM Grammar: {avg_score:.4f}, Fluency: {fluency:.4f}, Coherence: {coherence:.4f}, Mistakes: {mistakes}"
                 )
             except Exception as e:
                 console_logger.error(f"Error computing LLM grammar score: {e}")
@@ -172,9 +195,9 @@ if __name__ == "__main__":
     console_logger = get_logger("evaluation")
     artifacts_logger = get_logger("artifacts")
     main(
-        cross_entropy=False,
+        cross_entropy=True,
         throughput=True,
-        entity_coherence=False,
-        language_tool=False,
-        llm_grammar=False
+        entity_coherence=True,
+        language_tool=True,
+        llm_grammar=True
     )

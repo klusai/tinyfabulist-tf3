@@ -3,10 +3,20 @@ import math
 import multiprocessing as mp
 import os
 from datetime import datetime
+from pathlib import Path
 from typing import List, Tuple
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
+
+try:
+    from mlx_lm import load as mlx_load
+    from mlx_lm.tokenizer_utils import load_tokenizer
+    from mlx_lm.generate import generate
+    from mlx_lm.sample_utils import make_sampler
+    MLX_AVAILABLE = True
+except ImportError:
+    MLX_AVAILABLE = False
 
 
 def parse_args() -> argparse.Namespace:
@@ -149,30 +159,67 @@ def worker(
     top_k: int,
     seed: int,
 ) -> str:
-    if torch.cuda.is_available():
-        torch.backends.cuda.matmul.allow_tf32 = True
-        torch.backends.cudnn.allow_tf32 = True
-    device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
-    dtype = torch.bfloat16 if device.type == "cuda" or device.type == "mps" else None
+    # Check if this is an MLX model
+    is_mlx_model = "mlx" in model_path.lower() and MLX_AVAILABLE
+    
+    if is_mlx_model:
+        # Load MLX model
+        model_path_obj = Path(model_path)
+        model, _ = mlx_load(model_path_obj)
+        tokenizer = load_tokenizer(model_path_obj)
+        
+        # Create sampler with temperature and top_k
+        sampler = make_sampler(temp=temp, top_k=top_k)
+        
+        part_path = f"{out_path}.part{rank}"
+        with open(part_path, "w", encoding="utf-8") as f:
+            for ch in chars:
+                # Generate with MLX
+                response = generate(
+                    model,
+                    tokenizer,
+                    prompt=ch,
+                    max_tokens=max_new,
+                    sampler=sampler,
+                    verbose=False,
+                )
+                text = response.strip()
+                f.write(text + "\n")
+        return part_path
+    else:
+        # PyTorch path
+        if torch.cuda.is_available():
+            torch.backends.cuda.matmul.allow_tf32 = True
+            torch.backends.cudnn.allow_tf32 = True
+        device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+        dtype = torch.bfloat16 if device.type == "cuda" or device.type == "mps" else None
 
-    # Unique seed per worker
-    torch.manual_seed(seed + rank)
+        # Unique seed per worker
+        torch.manual_seed(seed + rank)
 
-    tokenizer = AutoTokenizer.from_pretrained(model_path)
-    model = AutoModelForCausalLM.from_pretrained(model_path, torch_dtype=dtype).to(
-        device
-    )
-    model.eval()
+        tokenizer = AutoTokenizer.from_pretrained(model_path)
+        model = AutoModelForCausalLM.from_pretrained(model_path, torch_dtype=dtype).to(
+            device
+        )
+        model.eval()
 
-    part_path = f"{out_path}.part{rank}"
-    with open(part_path, "w", encoding="utf-8") as f:
-        for ch in chars:
-            enc = tokenizer(ch, return_tensors="pt").to(device)
-            if "token_type_ids" in enc:
-                enc.pop("token_type_ids")
-            with torch.inference_mode():
-                if device.type == "cuda" or device.type == "mps":
-                    with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+        part_path = f"{out_path}.part{rank}"
+        with open(part_path, "w", encoding="utf-8") as f:
+            for ch in chars:
+                enc = tokenizer(ch, return_tensors="pt").to(device)
+                if "token_type_ids" in enc:
+                    enc.pop("token_type_ids")
+                with torch.inference_mode():
+                    if device.type == "cuda" or device.type == "mps":
+                        with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+                            out = model.generate(
+                                **enc,
+                                max_new_tokens=max_new,
+                                do_sample=True,
+                                temperature=temp,
+                                top_k=top_k,
+                            )
+                    else:
                         out = model.generate(
                             **enc,
                             max_new_tokens=max_new,
@@ -180,17 +227,9 @@ def worker(
                             temperature=temp,
                             top_k=top_k,
                         )
-                else:
-                    out = model.generate(
-                        **enc,
-                        max_new_tokens=max_new,
-                        do_sample=True,
-                        temperature=temp,
-                        top_k=top_k,
-                    )
-            text = tokenizer.decode(out[0], skip_special_tokens=True)
-            f.write(text + "\n")
-    return part_path
+                text = tokenizer.decode(out[0], skip_special_tokens=True)
+                f.write(text + "\n")
+        return part_path
 
 
 def build_eval_dataset(

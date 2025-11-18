@@ -1,3 +1,4 @@
+import argparse
 import os
 import re
 
@@ -18,11 +19,19 @@ def split_sentences(text: str):
     return [s for s in sentences if s]
 
 
-def gen_corpus(out_file="ds-tf2-en-ro-3m.txt", out_dir="artifacts"):
+def gen_corpus(
+    dataset_path="klusai/ds-tf2-en-ro-3m",
+    out_file="ds-tf2-en-ro-3m.txt",
+    out_dir="artifacts",
+):
     os.makedirs(out_dir, exist_ok=True)
     out_file = os.path.join(out_dir, out_file)
 
-    dataset = load_dataset("klusai/ds-tf2-en-ro-3m", split="train")
+    dataset = load_dataset(
+        dataset_path,
+        split="train",
+        verification_mode="no_checks",
+    )
 
     with open(out_file, "w", encoding="utf-8") as f:
         for idx, item in enumerate(dataset):
@@ -38,4 +47,4 @@ def gen_corpus(out_file="ds-tf2-en-ro-3m.txt", out_dir="artifacts"):
 
 if __name__ == "__main__":
     args = parse_args()
-    gen_corpus(args.output_path, args.dataset_path)
+    gen_corpus(args.dataset_path, args.output_file, args.output_dir)

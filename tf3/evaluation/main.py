@@ -26,7 +26,7 @@ except ImportError:
     print("MLX not available")
 
 ARTIFACTS_FOLDER = "tf3/evaluation/artifacts"
-CHECKPOINTS = ["mlx_cache/tf3-50m-base-q6-mlx"] #"tf3/artifacts/training"
+CHECKPOINTS = ["artifacts/tf3-50m-base-ab-mlp-atn"] #"tf3/artifacts/training"
 OUTPUT_PATH = "tf3/evaluation/artifacts/evaluation.log"
 
 
@@ -199,5 +199,5 @@ if __name__ == "__main__":
         throughput=True,
         entity_coherence=True,
         language_tool=True,
-        llm_grammar=True
+        llm_grammar=False
     )

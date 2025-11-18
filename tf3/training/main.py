@@ -23,10 +23,10 @@ def parse_args():
     parser.add_argument(
         "--tokenizer_path",
         type=str,
-        default="unigram_tokenizer.json",
+        default="artifacts/tokenizers_2025_11_18_18_49_10/unigram_tokenizer.json",
     )
     parser.add_argument(
-        "--dataset_path", type=str, default="ds-tf2-en-ro-3m-tokenized"
+        "--dataset_path", type=str, default="artifacts/ds-tf2-en-ro-3m-tokenized"
     )
     parser.add_argument("--output_dir", type=str, default="checkpoints/")
     parser.add_argument("--model_type", type=str, default="llama")

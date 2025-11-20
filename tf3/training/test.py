@@ -10,9 +10,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--checkpoint",
         type=str,
-        default="/run/media/andrei/MYUSB/tf3_checkpoints/llama-50M/checkpoint-23225/",
+        default="artifacts/transformers-sft",
     )
-    parser.add_argument("--prompt", type=str, default="Un iepure")
+    parser.add_argument("--prompt", type=str, default='''Creează o fabulă bazată pe următoarele elemente. Împletește-le natural într-o poveste:
+  - Personaj principal: un ghepard dragut
+  - Cadru: o zi de vară în jungla
+  - Provocare: un accident de avion care provoacă învinuiri
+  - Deznodământ: își dau seama de greșelile lor
+  - Învățătură: ghepardul este un animal dragut
+  ''')
     return parser.parse_args()
 
 
@@ -32,7 +38,7 @@ if __name__ == "__main__":
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.allow_tf32 = True
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cpu" # "cuda" if torch.cuda.is_available() else "cpu"
 
     # Prefer bf16 on GPUs that support it
     preferred_dtype = torch.bfloat16 if device == "cuda" else None
@@ -42,8 +48,21 @@ if __name__ == "__main__":
     model.to(device)
     model.eval()
 
-    prompt = args.prompt
-    inputs = tokenizer(prompt, return_tensors="pt").to(device)
+
+    print("eos_token:", tokenizer.eos_token, tokenizer.eos_token_id)
+    print("pad_token:", tokenizer.pad_token, tokenizer.pad_token_id)
+    print("bos_token:", tokenizer.bos_token, tokenizer.bos_token_id)
+    print("special_tokens:", tokenizer.special_tokens_map)
+    print("model eos/pad:", model.config.eos_token_id, model.config.pad_token_id)
+
+
+    raw_prompt = args.prompt.strip()
+    full_prompt = f"{raw_prompt}"  
+    inputs = tokenizer(
+        full_prompt,
+        return_tensors="pt",
+        add_special_tokens=False,  
+    ).to(device)
 
     # Remove token_type_ids if present
     if "token_type_ids" in inputs:
@@ -80,11 +99,10 @@ if __name__ == "__main__":
     # Start generation in a background thread to allow streaming consumption
     gen_kwargs = dict(
         **inputs,
-        max_new_tokens=500,
-        do_sample=False,
-        temperature=0.5,
-        top_p=0.9,
+        max_new_tokens=900,                 
+        do_sample=False,                    
         eos_token_id=tokenizer.eos_token_id,
+        pad_token_id=tokenizer.pad_token_id,
         use_cache=True,
         streamer=streamer,
         stopping_criteria=[counter],

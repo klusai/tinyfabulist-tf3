@@ -1,0 +1,159 @@
+# Fable entity configuration for generating 3M unique combinations
+# Each category contains multiple options that will be combined
+
+personaj_principal:
+  - un șoim
+  - o vulpe isteață
+  - un lup înțelept
+  - o furnică harnică
+  - un urs bun
+  - o găină curajoasă
+  - o broască ambițioasă
+  - un iepure sprinten
+  - un corb curios
+  - un leu generos
+  - o rândunică zburătoare
+  - un porumbel pașnic
+  - o veveriță grijulie
+  - un câine loial
+  - o pisică independentă
+  - un cal mândru
+  - o capră îndrăzneață
+  - o oaie blândă
+  - un miel nevinovat
+  - o rață aventuroasă
+  - un cocoș mândru
+  - o bufniță înțeleaptă
+  - un vrabete zburător
+  - o albină muncitoare
+  - un fluture frumos
+  - un gândac harnic
+  - o țestoasă răbdătoare
+  - un șarpe înțelept
+  - un liliac
+  - un urs polar curajos
+
+decor:
+  - dune bătute de vânt
+  - o pădure plină de mistere
+  - un câmp verde și înflorit
+  - un sat liniștit la marginea unei păduri
+  - o grădină plină de flori colorate
+  - un râu limpede care curge lin
+  - o munte înalt cu priveliști frumoase
+  - o vale liniștită între dealuri
+  - o plajă cu nisip fin și valuri blânde
+  - o livadă cu pomi roditori
+  - o pajiște verde cu flori sălbatice
+  - un lac cristalin
+  - o peșteră ascunsă în stânci
+  - o insulă mică și izolată
+  - o cascadă impresionantă
+  - o câmpie vastă cu iarbă înaltă
+  - un pod vechi peste un râu
+  - o casă veche abandonată
+  - o fântână veche în centrul satului
+  - o pădure de brazi verzi
+  - o coastă stâncoasă cu priveliște la mare
+  - o poiană ascunsă în pădure
+  - o grădină zoologică plină de viață
+  - o fermă cu animale multe
+  - o pădure tropicală
+  - o tundră rece
+  - o oază verde
+  - o pădure de stejar bătrân
+  - o coastă cu stânci
+  - o pădure de stejari albi
+
+provocare:
+  - transformarea unui nevinovat în un țap ispășitor
+  - pierderea unui obiect prețios și drag
+  - confruntarea cu un dușman puternic
+  - trebuie să aleagă între două opțiuni grele
+  - descoperirea unei minciuni care schimbă totul
+  - trebuie să depășească propria frică
+  - salvarea unui prieten din pericol
+  - trebuie să învețe să facă compromisuri
+  - confruntarea cu o decizie morală dificilă
+  - trebuie să găsească curajul să spună adevărul
+  - trebuie să învețe să împartă cu alții
+  - trebuie să depășească propria lăcomie
+  - trebuie să învețe să aștepte cu răbdare
+  - trebuie să găsească soluția unei probleme complexe
+  - trebuie să depășească prejudecățile
+  - trebuie să învețe să accepte ajutorul
+  - trebuie să găsească echilibrul între dorințe
+  - trebuie să depășească propria mândrie
+  - trebuie să învețe să fie recunoscător
+  - trebuie să găsească puterea să ierte
+  - trebuie să depășească propria lene
+  - trebuie să învețe să respecte regulile
+  - trebuie să găsească curajul să fie diferit
+  - trebuie să depășească propria invidie
+  - trebuie să învețe să fie generos
+  - trebuie să găsească puterea să continue
+  - trebuie să depășească propria teamă de eșec
+  - trebuie să învețe să aprecieze ceea ce are
+  - trebuie să găsească modul să ajute pe alții
+
+deznodamant:
+  - grupul votează o decizie dreaptă
+  - personajul găsește obiectul pierdut într-un loc neașteptat
+  - dușmanul devine prieten după ce înțelege adevărul
+  - personajul face alegerea corectă și este răsplătit
+  - minciuna este descoperită și adevărul triumfă
+  - personajul depășește frica și devine erou
+  - prietenul este salvat prin curaj și inteligență
+  - compromisul aduce fericire tuturor
+  - decizia morală corectă aduce pace și armonie
+  - adevărul spus aduce respect și încredere
+  - împărțirea aduce prietenie și bucurie
+  - lăcomia depășită aduce satisfacție adevărată
+  - răbdarea este răsplătită cu succes
+  - problema este rezolvată prin cooperare
+  - prejudecățile sunt depășite și toți devin prieteni
+  - ajutorul acceptat aduce succes comun
+  - echilibrul găsit aduce armonie în viață
+  - mândria depășită aduce umilință și respect
+  - recunoștința exprimată aduce bucurie tuturor
+  - iertarea oferită aduce pace și reconciliere
+  - lenea depășită aduce realizări și mândrie
+  - regulile respectate aduc ordine și siguranță
+  - diferența acceptată aduce diversitate și frumusețe
+  - invidia depășită aduce admirație și prietenie
+  - generozitatea arătată aduce bucurie și mulțumire
+  - teama de eșec depășită aduce încredere și realizări
+  - aprecierea exprimată aduce recunoștință și fericire
+  - ajutorul oferit aduce bucurie și satisfacție
+
+invatatura:
+  - aparențele pot fi înșelătoare
+  - munca harnică este întotdeauna răsplătită
+  - prietenia adevărată este mai valoroasă decât bogăția
+  - răbdarea aduce rezultate bune
+  - adevărul este întotdeauna mai bun decât minciuna
+  - curajul depășește frica
+  - generozitatea aduce bucurie
+  - umilința este o virtute
+  - recunoștința aduce fericire
+  - iertarea eliberează sufletul
+  - cooperarea aduce succes
+  - respectul pentru alții este important
+  - acceptarea diferențelor aduce armonie
+  - aprecierea a ceea ce ai aduce satisfacție
+  - ajutorul oferit altora aduce bucurie
+  - perseverența aduce realizări
+  - încrederea în sine aduce succes
+  - respectarea regulilor aduce ordine
+  - diferența este o virtute, nu un defect
+  - invidia nu aduce nimic bun
+  - generozitatea este răsplătită
+  - munca în echipă aduce rezultate mai bune
+  - răbdarea este o virtute
+  - aprecierea micilor lucruri aduce fericire
+  - ajutorul reciproc aduce prietenie
+  - încrederea în alții este importantă
+  - respectul pentru natură aduce pace
+  - umilința aduce respect
+  - recunoștința aduce bucurie
+

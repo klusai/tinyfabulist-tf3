@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 # ============================================================
 # 1. Load model + tokenizer
 # ============================================================
-model = LlamaForCausalLM.from_pretrained("artifacts/tf3-20m-distill-mlx")
+model = LlamaForCausalLM.from_pretrained("artifacts/tf3-50m-distilled-mlx")
 tokenizer = AutoTokenizer.from_pretrained("artifacts/transformers-sft")
 
 

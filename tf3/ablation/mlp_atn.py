@@ -471,10 +471,11 @@ def run_pipeline(args):
     base_loss, base_ppl = evaluate_cross_entropy(base_model, tokenizer, eval_texts)
     print(f"Base loss: {base_loss:.4f}, Base ppl: {base_ppl:.2f}")
 
-    mlp_abblation_rates = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-    attention_head_ablation_rates = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    # Only use 10%, 30%, 50%, 70% ablation rates for both mlp and attn.
+    mlp_ablation_rates = [0.1, 0.3, 0.5, 0.7]
+    attention_head_ablation_rates = [0.1, 0.3, 0.5, 0.7]
     benchmark_rows = []
-    for mlp_ablation_rate in mlp_abblation_rates:
+    for mlp_ablation_rate in mlp_ablation_rates:
         for attention_head_ablation_rate in attention_head_ablation_rates:
             print(f"Running pipeline for MLP ablation rate {mlp_ablation_rate} and attention head ablation rate {attention_head_ablation_rate}")
             ablated_model = AutoModelForCausalLM.from_pretrained(args.model_path)

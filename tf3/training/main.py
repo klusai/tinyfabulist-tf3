@@ -5,8 +5,8 @@ This file contains the main function for training the model.
 import argparse
 
 from datasets import load_from_disk
-from tf3.training.mamba.model import model as mamba_model  # Mamba model
-from tf3.training.llama.model import model as llama_model  # LLaMA model
+#from tf3.training.mamba.model import model as mamba_model  # Mamba model
+from tf3.training.llama.student import model as llama_model  # LLaMA model
 from tf3.logger import get_logger
 from transformers import (
     DataCollatorForLanguageModeling,
@@ -23,7 +23,7 @@ def parse_args():
     parser.add_argument(
         "--tokenizer_path",
         type=str,
-        default="artifacts/tokenizers_2025_11_18_18_49_10/unigram_tokenizer.json",
+        default="artifacts/tf3-50m-f-distilled-mlx/tokenizer.json",
     )
     parser.add_argument(
         "--dataset_path", type=str, default="artifacts/ds-tf2-en-ro-3m-tokenized"
@@ -44,7 +44,7 @@ if __name__ == "__main__":
         model_name = "mamba-50M"
     elif args.model_type == "llama":
         model = llama_model
-        model_name = "llama-50M"
+        model_name = "llama-20M"
     else:
         raise ValueError(f"Invalid model type: {args.model_type}")
 
@@ -100,10 +100,10 @@ if __name__ == "__main__":
 
     args = TrainingArguments(
         output_dir=args.output_dir,
-        per_device_train_batch_size=96,  # H200 141GB can handle larger batches; adjust if needed
-        gradient_accumulation_steps=1,
+        per_device_train_batch_size=8,  
+        gradient_accumulation_steps=4,
         learning_rate=3e-4,
-        warmup_steps=1000,
+        warmup_steps=300,
         num_train_epochs=5,
         save_steps=1000,
         logging_steps=100,
@@ -114,13 +114,13 @@ if __name__ == "__main__":
         gradient_checkpointing=True,
         dataloader_num_workers=16,
         dataloader_pin_memory=True,
-        dataloader_persistent_workers=True,
+        dataloader_persistent_workers=False,
         metric_for_best_model="eval_loss",
         greater_is_better=False,
         optim="adamw_torch_fused",
         include_tokens_per_second=True,
         torch_compile=True,
-        report_to="wandb",
+        report_to="none",
         lr_scheduler_type="cosine",
         load_best_model_at_end=True,
         max_grad_norm=1.0

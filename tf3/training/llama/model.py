@@ -9,16 +9,9 @@ config = LlamaConfig(
     max_position_embeddings=2048,
     rms_norm_eps=1e-6,
     rope_theta=10000.0,
-    tie_word_embeddings=True,
 )
 
 model = LlamaForCausalLM(config)
-
-# ensure vocab matches
-model.resize_token_embeddings(config.vocab_size)
-
-# ADD THIS (required by HF to activate tying)
-model.tie_weights()
 
 if __name__ == "__main__":
     num_params = sum(p.numel() for p in model.parameters())

@@ -22,13 +22,13 @@ except ImportError:
 # ============================================================
 # 1. Configuration
 # ============================================================
-MODEL_PATH = "artifacts/transformers-final-sft"
+MODEL_PATH = "artifacts/transformers-sft"
 OUTPUT_DIR = "artifacts/fable_batch_generation"
 ENTITIES_YAML = "tf3/ds_generation/fable_entities.yaml"
 TOTAL_FABLES = 3_000_000
-BATCH_SIZE = 128               
-MAX_TOKENS = 512               
-SHARD_SIZE = 50_000            # write file every 50k fables
+BATCH_SIZE = 1024              
+MAX_TOKENS = 640               
+SHARD_SIZE = 1_000            # write file every 1k fables
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -146,7 +146,27 @@ def generate_batch(model, tokenizer, combinations, start_idx, batch_size):
         verbose=False,
     )
 
-    outputs = [o["generated_text"] for o in resp.generations]
+    # Handle different BatchResponse structures
+    # Try different possible attribute names
+    if hasattr(resp, 'generations'):
+        outputs = [o["generated_text"] for o in resp.generations]
+    elif hasattr(resp, 'texts'):
+        outputs = resp.texts
+    elif hasattr(resp, 'outputs'):
+        outputs = resp.outputs
+    elif isinstance(resp, list):
+        # If resp is directly a list
+        outputs = [o["generated_text"] if isinstance(o, dict) else o for o in resp]
+    else:
+        # Try to access as iterable or decode manually
+        # Check if resp has a __iter__ method
+        try:
+            outputs = list(resp)
+        except TypeError:
+            # Last resort: try to get generated texts from response
+            # This might require decoding token IDs if available
+            raise AttributeError(f"BatchResponse object doesn't have expected attributes. Available attributes: {dir(resp)}")
+    
     return outputs
 
 

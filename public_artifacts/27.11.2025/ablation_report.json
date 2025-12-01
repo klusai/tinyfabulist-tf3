@@ -1,0 +1,615 @@
+{
+  "generated_at": "2025-11-24T10:32:16.535507Z",
+  "model_path": "klusai/tf3-50m-base",
+  "evaluation_texts": [
+    "Vulpea si",
+    "Lupul si",
+    "Ursul si",
+    "Gaina cu",
+    "Broasca si",
+    "Furnica si",
+    "Soarecele si",
+    "Corbul cu",
+    "Iepurele si",
+    "Leul si",
+    "A fost odata",
+    "Intr-o padure",
+    "Pe un camp",
+    "La margine",
+    "In gradina",
+    "Sub un copac",
+    "Langa un rau",
+    "Intr-un sat",
+    "La țară",
+    "In impărăție",
+    "Vulpea fugărea",
+    "Lupul vâna",
+    "Ursul dormea",
+    "Gaina cânta",
+    "Broasca înota",
+    "Furnica munci",
+    "Soarecele fura",
+    "Corbul zboara",
+    "Iepurele alerga",
+    "Leul poruncea",
+    "O bucata de",
+    "O ramura de",
+    "Un ou de",
+    "O pana de",
+    "O piatra prețioasă",
+    "O coroniță de",
+    "O comoara ascunsă",
+    "O vrajă veche",
+    "O invitație la",
+    "O promisiune de",
+    "Lenea duce",
+    "Munca aduce",
+    "Cine alearga",
+    "Vorba dulce",
+    "Gândirea lentă",
+    "Increderea oarbă",
+    "Lăcomia distruge",
+    "Smerenia castigă",
+    "Prietenia adevarată",
+    "Minciuna are",
+    "Vulpea a pacalit corbul.",
+    "Furnica a strans pentru iarna.",
+    "Broasca a invins iepurele.",
+    "Lupul a mancat oaia.",
+    "Ursul a gasit miere.",
+    "Gaina a dat ouă de aur.",
+    "Soarecele a salvat leul.",
+    "Corbul a pierdut branza.",
+    "Iepurele a pierdut cursa.",
+    "Leul a impartit prada.",
+    "'Buna ziua,' spuse vulpea.",
+    "'Ajuta-ma!' striga furnica.",
+    "'Vino repede!' chema iepurele.",
+    "'Asculta-ma!' porunci leul.",
+    "'Am gasit!' exclamă ursul.",
+    "'Am pierdut!' plânse corbul.",
+    "'Am castigat!' anunta broasca.",
+    "'Am invatat!' recunoscu lupul.",
+    "'Am promis!' jura soarecele.",
+    "'Am muncit!' spuse furnica.",
+    "Intr-o zi frumoasa",
+    "Cand soarele stralucea",
+    "In timpul iernii",
+    "Primavara venise",
+    "Vantul batea",
+    "Ploaia canta",
+    "Zapada acoperea",
+    "Frunzele cadeau",
+    "Flori infloreau",
+    "Fructele maturau",
+    "Cine e mai puternic?",
+    "Cine alearga mai repede?",
+    "Cine e mai destept?",
+    "Cine castiga comoara?",
+    "Cine ajunge primul?",
+    "Cine gaseste raspunsul?",
+    "Cine invata lectia?",
+    "Cine spune adevarul?",
+    "Cine respecta promisiunea?",
+    "Cine ajuta prietenul?",
+    "Lenea nu plateste.",
+    "Munca este rasplatita.",
+    "Grabeste-te incet.",
+    "Cine astepa ajunge.",
+    "Minte si vei prinde.",
+    "Increderea ucide.",
+    "Puterea nu inseamna tot.",
+    "Desteptul castiga.",
+    "Rabdarea are roade.",
+    "Prietenia adevarata dureaza."
+  ],
+  "report_prompts": [
+    "Vulpea si",
+    "Intr-o padure",
+    "Broasca a invins iepurele.",
+    "Lupul a mancat oaia.",
+    "Lenea nu plateste."
+  ],
+  "base_metrics": {
+    "loss": 5.567566553504434,
+    "ppl": 261.7962562942639
+  },
+  "results": [
+    {
+      "mlp_rate": 0.1,
+      "attn_rate": 0.1,
+      "ablated_loss": 5.657566049421557,
+      "ablated_ppl": 286.4505868126096,
+      "delta_loss_pct": 1.6164960948778249,
+      "delta_ppl_pct": 9.41737321508285,
+      "samples": [
+        {
+          "prompt": "Vulpea si",
+          "output": "Vulpea simand a cidrat o povară grea. Ajăturat, am găsit "
+        },
+        {
+          "prompt": "Intr-o padure",
+          "output": "Intr-o padure a ovure de o broască bătrână și înțeleaptă. A zburat spre un deal unde o privea cu ochi mari și rotunzi. Ornitorincul"
+        },
+        {
+          "prompt": "Broasca a invins iepurele.",
+          "output": "Broasca a invins iepurele. Iepurele a sărit, a speriat o familie de păsări. Păsările au țipat de furie, iar broasca s-a simțit vinovată. O bufniță bătrână și înțeleaptă,"
+        },
+        {
+          "prompt": "Lupul a mancat oaia.",
+          "output": "Lupul a mancat oaia. Au ajuns la un caieță nou-născut. Mancata a început să se crape, dar "
+        },
+        {
+          "prompt": "Lenea nu plateste.",
+          "output": "Lenea nu plateste. O veveriță o învinovățea pe hermină pentru poznele ei. Hermina, la fel de sfâșiată ca întotdeauna, a început să dea vina"
+        }
+      ],
+      "saved_model_dir": null
+    },
+    {
+      "mlp_rate": 0.1,
+      "attn_rate": 0.3,
+      "ablated_loss": 6.13419712090381,
+      "ablated_ppl": 461.3685221345402,
+      "delta_loss_pct": 10.177346996287238,
+      "delta_ppl_pct": 76.23190211549601,
+      "samples": [
+        {
+          "prompt": "Vulpea si",
+          "output": "Vulpea simiziui iari să ia unei alte țesinii auri ar"
+        },
+        {
+          "prompt": "Intr-o padure",
+          "output": "Intr-o padurer. a început la amorscară. „De ce ai o vizul"
+        },
+        {
+          "prompt": "Broasca a invins iepurele.",
+          "output": "Broasca a invins iepurele. umirei s-a așezat, cu gâtul zdonis clătinându-se. Își desfășura aripile, simțind cum aripile o priveau peste"
+        },
+        {
+          "prompt": "Lupul a mancat oaia.",
+          "output": "Lupul a mancat oaia. „De ce vrei să rănești acest ținut neaz-opărantăresca aniiz"
+        },
+        {
+          "prompt": "Lenea nu plateste.",
+          "output": "Lenea nu plateste. Tomoarcă aricii aul arit pentru o durere din nou. Într-o"
+        }
+      ],
+      "saved_model_dir": null
+    },
+    {
+      "mlp_rate": 0.1,
+      "attn_rate": 0.5,
+      "ablated_loss": 6.34478099016157,
+      "ablated_ppl": 569.5126471831618,
+      "delta_loss_pct": 13.959679317491561,
+      "delta_ppl_pct": 117.54040918867032,
+      "samples": [
+        {
+          "prompt": "Vulpea si",
+          "output": "Vulpea si araluleaxule față de arărule arăţară de"
+        },
+        {
+          "prompt": "Intr-o padure",
+          "output": "Intr-o padure. Caracatița fră și fflelatfffulate, caracatița și adura"
+        },
+        {
+          "prompt": "Broasca a invins iepurele.",
+          "output": "Broasca a invins iepurele. Dar atunci a fost de un ospăț și mai multe coșuri de obicei. Fermierul și mai multe coșuri de grijă, Fermierul lelese l"
+        },
+        {
+          "prompt": "Lupul a mancat oaia.",
+          "output": "Lupul a mancat oaia. Erauzi prieteni neașteptați. Împreună audaleaptatutivale că aleaule"
+        },
+        {
+          "prompt": "Lenea nu plateste.",
+          "output": "Lenea nu plateste. Ne grijă orăscă că are un dar de obiceire. Nuclearise ostră,"
+        }
+      ],
+      "saved_model_dir": null
+    },
+    {
+      "mlp_rate": 0.1,
+      "attn_rate": 0.7,
+      "ablated_loss": 7.54678227482465,
+      "ablated_ppl": 1894.6364929680915,
+      "delta_loss_pct": 35.549026712117595,
+      "delta_ppl_pct": 623.7064883152815,
+      "samples": [
+        {
+          "prompt": "Vulpea si",
+          "output": "Vulpea sisparscăscăre egal!”, dar numai drepte, născut. În fiecare pas înapoiațiuis cum trebuie să ajute pe săturate"
+        },
+        {
+          "prompt": "Intr-o padure",
+          "output": "Intr-o padurechichiparte cea mai presusecreatecrechiechitrăvea? apuca și patru patru patru raftecrea"
+        },
+        {
+          "prompt": "Broasca a invins iepurele.",
+          "output": "Broasca a invins iepurele. Dar cu toții siguri, dar acum stăteau înăs scriauripus cine trecea. Țestoasa bătrână și înțeleaptă mânzătoarea grotei magice. Ochii Înțelepții"
+        },
+        {
+          "prompt": "Lupul a mancat oaia.",
+          "output": "Lupul a mancat oaia. Din acea ghelechibinguriezi? Cine broască-țestoasă bătrână și înțeleaptă din nouaschieriechiptări?"
+        },
+        {
+          "prompt": "Lenea nu plateste.",
+          "output": "Lenea nu plateste. Bufnița bătrână și înțeleaptă ale cărei penețiechipechorechiechipechiechoriașe"
+        }
+      ],
+      "saved_model_dir": null
+    },
+    {
+      "mlp_rate": 0.3,
+      "attn_rate": 0.1,
+      "ablated_loss": 6.051159865748641,
+      "ablated_ppl": 424.60522960939454,
+      "delta_loss_pct": 8.685900879618865,
+      "delta_ppl_pct": 62.18919079275537,
+      "samples": [
+        {
+          "prompt": "Vulpea si",
+          "output": "Vulpea sișa la ea a ta a la a a o mie de s lu "
+        },
+        {
+          "prompt": "Intr-o padure",
+          "output": "Intr-o padure eu a furat – a lat a fost o caracatiță șireată!” au strigat ele. Locuitorii ae"
+        },
+        {
+          "prompt": "Broasca a invins iepurele.",
+          "output": "Broasca a invins iepurele. A văzut o păsărică cu o rătăren și o pasăre cu o aripă ră înapoi pe o"
+        },
+        {
+          "prompt": "Lupul a mancat oaia.",
+          "output": "Lupul a mancat oaia. E atât de prețioasă!” a spus ea, cu vocea tremurândă plină de încredere. Capra a clătinat din oou pe cărn"
+        },
+        {
+          "prompt": "Lenea nu plateste.",
+          "output": "Lenea nu plateste. În timp ce o ta de ou, un iepure din Iute Sprinten a scos capul la iveală. „Te-am văzut la"
+        }
+      ],
+      "saved_model_dir": null
+    },
+    {
+      "mlp_rate": 0.3,
+      "attn_rate": 0.3,
+      "ablated_loss": 6.386902500644998,
+      "ablated_ppl": 594.0137698413187,
+      "delta_loss_pct": 14.716230857174834,
+      "delta_ppl_pct": 126.89926061189966,
+      "samples": [
+        {
+          "prompt": "Vulpea si",
+          "output": "Vulpea singnat amncat de aur, de tot nemnccnte!” Vulpea Odată,"
+        },
+        {
+          "prompt": "Intr-o padure",
+          "output": "Intr-o padure a aei!” m se scufunda, zburând și lapc. Dar, în loc a fost mai mult decât a"
+        },
+        {
+          "prompt": "Broasca a invins iepurele.",
+          "output": "Broasca a invins iepurele. lbița cu glas răsunător. — Beh, o melodie dulce a harvb! B Ochi a"
+        },
+        {
+          "prompt": "Lupul a mancat oaia.",
+          "output": "Lupul a mancat oaia. Am văzut oaia pe celălalt o oaie pe o altă o altă o oaie.” o oaie o bufniță bătrână: o bufniță  copaci."
+        },
+        {
+          "prompt": "Lenea nu plateste.",
+          "output": "Lenea nu plateste. Le plac doar pe mine!” Dar, pe suprafața înghețată înghețată înghețată se ridica de stele, lumina caldă gher printre lumina a er tăios."
+        }
+      ],
+      "saved_model_dir": null
+    },
+    {
+      "mlp_rate": 0.3,
+      "attn_rate": 0.5,
+      "ablated_loss": 7.026101150927981,
+      "ablated_ppl": 1125.633369050466,
+      "delta_loss_pct": 26.19698540479038,
+      "delta_ppl_pct": 329.96541852196424,
+      "samples": [
+        {
+          "prompt": "Vulpea si",
+          "output": "Vulpea siase.ți-oăă-sens. Măgarul. Și-au rămasa câștigat o parte printr-un întreg o victorie deză o victorie singură. Din fericire, o"
+        },
+        {
+          "prompt": "Intr-o padure",
+          "output": "Intr-o padurez insulei. Insula era dese de aceea ca cuprinsă amărăciunea. Un prieten al unei păsări care spunea vorbe urâte sfi"
+        },
+        {
+          "prompt": "Broasca a invins iepurele.",
+          "output": "Broasca a invins iepurele. să devină judecat. Omitaterfeț, neștiind pe cei rămași cu adevărat carâțită. Omitate"
+        },
+        {
+          "prompt": "Lupul a mancat oaia.",
+          "output": "Lupul a mancat oaia. Însă, pe ascuns, nu și! Îndisunelivă pe toți cei buni. l-am ajutat pe singur ztor "
+        },
+        {
+          "prompt": "Lenea nu plateste.",
+          "output": "Lenea nu plateste. o melodie de amintiri străvechi. Înț aburind, al cărui loc subteran are uniuniclani.iiiner"
+        }
+      ],
+      "saved_model_dir": null
+    },
+    {
+      "mlp_rate": 0.3,
+      "attn_rate": 0.7,
+      "ablated_loss": 6.8095455117767,
+      "ablated_ppl": 906.458738492983,
+      "delta_loss_pct": 22.307393119360533,
+      "delta_ppl_pct": 246.24587506480853,
+      "samples": [
+        {
+          "prompt": "Vulpea si",
+          "output": "Vulpea si xu xxataxaxxaxexexxxxxxxxx săxxxx"
+        },
+        {
+          "prompt": "Intr-o padure",
+          "output": "Intr-o padure cămararape sibele de eibele mele”, alealeali"
+        },
+        {
+          "prompt": "Broasca a invins iepurele.",
+          "output": "Broasca a invins iepurele. a mai mulți caca început miea a miea mai multe caurăci"
+        },
+        {
+          "prompt": "Lupul a mancat oaia.",
+          "output": "Lupul a mancat oaia. cauca scris înpca treiafunica mai multe caseară, s"
+        },
+        {
+          "prompt": "Lenea nu plateste.",
+          "output": "Lenea nu plateste. Dar veverița și veverițele și veverița s-a simțitrăcând cei mai mult. o veveriță ausca și aleala veveriță."
+        }
+      ],
+      "saved_model_dir": null
+    },
+    {
+      "mlp_rate": 0.5,
+      "attn_rate": 0.1,
+      "ablated_loss": 7.388417757502982,
+      "ablated_ppl": 1617.145371480339,
+      "delta_loss_pct": 32.70461496059596,
+      "delta_ppl_pct": 517.7114197013716,
+      "samples": [
+        {
+          "prompt": "Vulpea si",
+          "output": "Vulpea si aui l o cale de a mă ce t seama c:    secret t l l"
+        },
+        {
+          "prompt": "Intr-o padure",
+          "output": "Intr-o padure de a m mai de m uitat cu  o m de  mă de o m de o m de de "
+        },
+        {
+          "prompt": "Broasca a invins iepurele.",
+          "output": "Broasca a invins iepurele. !”, e a a râs un alt ac a l c se de a un  de a m"
+        },
+        {
+          "prompt": "Lupul a mancat oaia.",
+          "output": "Lupul a mancat oaia.  că l l a l ei l l o c  l că a lu ți"
+        },
+        {
+          "prompt": "Lenea nu plateste.",
+          "output": "Lenea nu plateste. a  de u cele de  fructe din a u fi o c foarte mândru și de a fi c în o"
+        }
+      ],
+      "saved_model_dir": null
+    },
+    {
+      "mlp_rate": 0.5,
+      "attn_rate": 0.3,
+      "ablated_loss": 7.297748623146425,
+      "ablated_ppl": 1476.9709633738432,
+      "delta_loss_pct": 31.076091376993958,
+      "delta_ppl_pct": 464.1680993763716,
+      "samples": [
+        {
+          "prompt": "Vulpea si",
+          "output": "Vulpea si cuvenit. Deranl cu un o dr i, o irar și ir, dar i"
+        },
+        {
+          "prompt": "Intr-o padure",
+          "output": "Intr-o padure a l dr dr g dr o învins. nir, i  anual nr "
+        },
+        {
+          "prompt": "Broasca a invins iepurele.",
+          "output": "Broasca a invins iepurele. o cadă. diri cu drept strui rira i ni s-au i dr "
+        },
+        {
+          "prompt": "Lupul a mancat oaia.",
+          "output": "Lupul a mancat oaia. iir i, l ni derir ira l i, cu cr r "
+        },
+        {
+          "prompt": "Lenea nu plateste.",
+          "output": "Lenea nu plateste. Degl i, ni, acri, i, i i, i, i dr"
+        }
+      ],
+      "saved_model_dir": null
+    },
+    {
+      "mlp_rate": 0.5,
+      "attn_rate": 0.5,
+      "ablated_loss": 7.70473375958195,
+      "ablated_ppl": 2218.8265623032457,
+      "delta_loss_pct": 38.386019916229,
+      "delta_ppl_pct": 747.5394544256748,
+      "samples": [
+        {
+          "prompt": "Vulpea si",
+          "output": "Vulpea si totdeauna.” al cerc, l-au amintitaterele cracul bătrân. Acesta V căruia cioc. I-a venit l-a invitat pe primul "
+        },
+        {
+          "prompt": "Intr-o padure",
+          "output": "Intr-o padure șanț de unul pe care a vrut să grabă, să-l veselă. În timp un mic plan ca a un simplu. Când când a fost"
+        },
+        {
+          "prompt": "Broasca a invins iepurele.",
+          "output": "Broasca a invins iepurele. Daro aceasta acesta moară. „Eu topit. Amândoi topit. „De ce nu cioc. De mult trebuie să-i învețe pe primul să pregătească-i împotriva mâini c"
+        },
+        {
+          "prompt": "Lupul a mancat oaia.",
+          "output": "Lupul a mancat oaia. Când jur, s-a agățat-i în cel mai noua grabă, ca una ha ele: un alt micin un buclucaș, căruia"
+        },
+        {
+          "prompt": "Lenea nu plateste.",
+          "output": "Lenea nu plateste. totdeauna.” jur, asigur îlă născut. Totuși, mintea înspăimântătoare cât hau rămas bună a cioc. În jur, un nou"
+        }
+      ],
+      "saved_model_dir": null
+    },
+    {
+      "mlp_rate": 0.5,
+      "attn_rate": 0.7,
+      "ablated_loss": 8.724902178228922,
+      "ablated_ppl": 6154.274612049906,
+      "delta_loss_pct": 56.709436598241346,
+      "delta_ppl_pct": 2250.7878604392213,
+      "samples": [
+        {
+          "prompt": "Vulpea si",
+          "output": "Vulpea si pe curmale fără niciodată aceeași. de pe când zbura și dinsprei oferit, privind furnicile cu invidie în timp alături. l curând l chiar lângă l"
+        },
+        {
+          "prompt": "Intr-o padure",
+          "output": "Intr-o padure l chiar când țestoasa se instalarea, alungând l chiar l chiar lângă căutarea preț atât l chiar l chiar dacă încredd vânt dormi tot"
+        },
+        {
+          "prompt": "Broasca a invins iepurele.",
+          "output": "Broasca a invins iepurele. fără lotusu că u singuraltul, altul, iepurele i-a spus vostru l l chiar Mustăcios puțin nu-i doresc l un cuib doar de pe când "
+        },
+        {
+          "prompt": "Lupul a mancat oaia.",
+          "output": "Lupul a mancat oaia. „Nu acest premiu acest dar să nni doar l îm l alături un altcineva pe piciori l curând să poarte nume păsările chiar"
+        },
+        {
+          "prompt": "Lenea nu plateste.",
+          "output": "Lenea nu plateste. l interesată de l ocupat puțin acume Deștii noștri l oriunde numească prietenul alături l chiar fericit Ariciul l alături legănat acum fericită l"
+        }
+      ],
+      "saved_model_dir": null
+    },
+    {
+      "mlp_rate": 0.7,
+      "attn_rate": 0.1,
+      "ablated_loss": 7.544017305641115,
+      "ablated_ppl": 1889.4051170804394,
+      "delta_loss_pct": 35.499364635212665,
+      "delta_ppl_pct": 621.708226017072,
+      "samples": [
+        {
+          "prompt": "Vulpea si",
+          "output": "Vulpea si vori   va vor  vor mai  vor     și  și  și  cer: vor  și, și  și și și"
+        },
+        {
+          "prompt": "Intr-o padure",
+          "output": "Intr-o padure era  cu .”   nu  ::: deveneau cele și    vor:: vor  t: se:   îmbogățește"
+        },
+        {
+          "prompt": "Broasca a invins iepurele.",
+          "output": "Broasca a invins iepurele. , ,  și   și   și    privea   și și      și  și și  se "
+        },
+        {
+          "prompt": "Lupul a mancat oaia.",
+          "output": "Lupul a mancat oaia.  și ale        și     poate   nu   și  și  descoperea:     "
+        },
+        {
+          "prompt": "Lenea nu plateste.",
+          "output": "Lenea nu plateste. va vor a            și    și  și    deschide și    și "
+        }
+      ],
+      "saved_model_dir": null
+    },
+    {
+      "mlp_rate": 0.7,
+      "attn_rate": 0.3,
+      "ablated_loss": 8.588989800650447,
+      "ablated_ppl": 5372.183956584912,
+      "delta_loss_pct": 54.26829150779019,
+      "delta_ppl_pct": 1952.0476620362654,
+      "samples": [
+        {
+          "prompt": "Vulpea si",
+          "output": "Vulpea si Cârtițoiul Nevăstuica Gânditoare vietățile roua trebuie decât doar roua lași doar”, clip de aici de dormit doar doar câteva clipe cu amândoi dormea  să împart amândoi amândouă să-ți "
+        },
+        {
+          "prompt": "Intr-o padure",
+          "output": "Intr-o padure se  de nectar miere și se strânge de fructe nectar și burta insecte de nectar și foarte nectar nectar nectar nectar nectar și nectar nectar nectar nectar nectar nectar nectar nectar"
+        },
+        {
+          "prompt": "Broasca a invins iepurele.",
+          "output": "Broasca a invins iepurele. o o vântul, cu de  afirm false  doar de  din  un de aici până pe muntele valea  creasta creasta creasta creasta creasta creasta creasta"
+        },
+        {
+          "prompt": "Lupul a mancat oaia.",
+          "output": "Lupul a mancat oaia.  creasta dedesubt, creasta din roșu de obosit de cântecul dimineața cea râs când  creasta creasta creasta cocoțată creasta roșu creasta creasta creasta roșu  creasta creasta creasta roșu roșu roșu"
+        },
+        {
+          "prompt": "Lenea nu plateste.",
+          "output": "Lenea nu plateste.  scântei  strălucind.” Vulpea Șireată Șireată și șș șșșșșșșșșșșșșșșșșșș"
+        }
+      ],
+      "saved_model_dir": null
+    },
+    {
+      "mlp_rate": 0.7,
+      "attn_rate": 0.5,
+      "ablated_loss": 9.046360811586514,
+      "ablated_ppl": 8487.593700136993,
+      "delta_loss_pct": 62.48320921987717,
+      "delta_ppl_pct": 3142.0607614024775,
+      "samples": [
+        {
+          "prompt": "Vulpea si",
+          "output": "Vulpea si însă prietenul răsunați inspirați s-au umplut mai copaci.ți copacilor cumveri des unii aceeași care, care născut. s-aurestești acestui aceeași"
+        },
+        {
+          "prompt": "Intr-o padure",
+          "output": "Intr-o padure râuri râuri râuri râuri râuri râuri plaje râuri râuri junglei. râuri palmierilor. văzut de setea veniseră amenințat cascada. „Opriți-vă! de cenușă întunecate venind chiar acesteianul înaintează lupta. Animalele văii. Vuietul"
+        },
+        {
+          "prompt": "Broasca a invins iepurele.",
+          "output": "Broasca a invins iepurele. Curând trei râsuloiți dulce pele s-aucurgând. multe pândeștețir delicioase multe pândeștețir lagunei care cântaursăți del mai văzuse de"
+        },
+        {
+          "prompt": "Lupul a mancat oaia.",
+          "output": "Lupul a mancat oaia. după multă șansa loc să reziste multă atât urle. În hrană mereu umed deodată care fier râul care curger căminul sălț uscaționezer oricărui să rămână"
+        },
+        {
+          "prompt": "Lenea nu plateste.",
+          "output": "Lenea nu plateste. În când spațiu vor s-au colonii primitoare de toate duceau spre stupul. L-a un venițiodată,  gustoasăpuseserărea repede care mici în lagună s-au apropiat,li"
+        }
+      ],
+      "saved_model_dir": null
+    },
+    {
+      "mlp_rate": 0.7,
+      "attn_rate": 0.7,
+      "ablated_loss": 8.226474208742797,
+      "ablated_ppl": 3738.628861970931,
+      "delta_loss_pct": 47.75708794293168,
+      "delta_ppl_pct": 1328.0681148353176,
+      "samples": [
+        {
+          "prompt": "Vulpea si",
+          "output": "Vulpea si un care părea important totul toatăoneze înțelept aventuri cu comori. secreteățlortorului a prietenii altcuiva.e. roade roade două alegereaă cuii gard cu"
+        },
+        {
+          "prompt": "Intr-o padure",
+          "output": "Intr-o padure bine. joacă. bunătate.idee. Pot roade altură.idee. nimănui.idee. nimic. dd fața aprinsă. Peștele acae a despre cace"
+        },
+        {
+          "prompt": "Broasca a invins iepurele.",
+          "output": "Broasca a invins iepurele. c prietenie.ci-au cu ochii deschise. plinerea prietenilor altcuiva..  după c despre planul de înaie deeii-au încheiateee"
+        },
+        {
+          "prompt": "Lupul a mancat oaia.",
+          "output": "Lupul a mancat oaia.esunau altele. maiie aproape. două îi adevărată. contei baniă gata zi,are mai bună unul. mai bune din aceea. aceea"
+        },
+        {
+          "prompt": "Lenea nu plateste.",
+          "output": "Lenea nu plateste.sate.  caldă cu pești pești pești pentru crea c mai mare – arctice.sta – prinse. totul – ține care lor le"
+        }
+      ],
+      "saved_model_dir": null
+    }
+  ]
+}

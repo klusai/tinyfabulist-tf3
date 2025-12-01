@@ -10,7 +10,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--checkpoint",
         type=str,
-        default="artifacts/transformers-sft",
+        default="checkpoints/llama-20M/checkpoint-28000",
     )
     parser.add_argument("--prompt", type=str, default='''Creează o fabulă bazată pe următoarele elemente. Împletește-le natural într-o poveste:
   - Personaj principal: un ghepard dragut

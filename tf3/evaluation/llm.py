@@ -81,6 +81,7 @@ Respond in JSON format with the following structure:
                 },
                 {"role": "user", "content": prompt},
             ],
+            max_tokens=2000,
             temperature=0.1,  # Lower temperature for more consistent results
         )
 

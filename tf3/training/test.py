@@ -10,14 +10,24 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--checkpoint",
         type=str,
-        default="checkpoints/llama-20M/checkpoint-28000",
+        default="artifacts/transformers-sft",
     )
-    parser.add_argument("--prompt", type=str, default='''Creează o fabulă bazată pe următoarele elemente. Împletește-le natural într-o poveste:
-  - Personaj principal: un ghepard dragut
-  - Cadru: o zi de vară în jungla
-  - Provocare: un accident de avion care provoacă învinuiri
-  - Deznodământ: își dau seama de greșelile lor
-  - Învățătură: ghepardul este un animal dragut
+    parser.add_argument("--prompt", type=str, default='''Creeaza o poveste despre un rac. 
+  - Personaj principal: un fluture
+  - Decor: o pădure
+  - Provocare: întâmpină un urs
+  - Deznodământ: tradat de urs
+  - Învățătură: somn
+Fabula ar trebui:
+  - Să fie potrivită pentru grupa de vârstă B (4-7 ani)
+  - Să folosească un vocabular simplu pe care copiii de 4-7 ani îl pot înțelege
+  - Să folosească limbaj concret, nu abstract
+  - Să înceapă cu o descriere vie a decorului
+  - Să nu folosească nume pentru personaje, ci trăsătura și tipul personajului
+  - Să includă dialog semnificativ, dar simplu
+  - Să arate (nu să spună) evoluția personajului
+  - Să se încheie cu o legătură clară la morală
+  Păstrează povestea concisă, dar captivantă, în jur de 250 de cuvinte.
   ''')
     return parser.parse_args()
 
@@ -48,14 +58,6 @@ if __name__ == "__main__":
     model.to(device)
     model.eval()
 
-
-    print("eos_token:", tokenizer.eos_token, tokenizer.eos_token_id)
-    print("pad_token:", tokenizer.pad_token, tokenizer.pad_token_id)
-    print("bos_token:", tokenizer.bos_token, tokenizer.bos_token_id)
-    print("special_tokens:", tokenizer.special_tokens_map)
-    print("model eos/pad:", model.config.eos_token_id, model.config.pad_token_id)
-
-
     raw_prompt = args.prompt.strip()
     full_prompt = f"{raw_prompt}"  
     inputs = tokenizer(
@@ -73,6 +75,7 @@ if __name__ == "__main__":
         tokenizer,
         skip_special_tokens=True,
         clean_up_tokenization_spaces=False,
+        skip_prompt=True,
     )
 
     # Token counter via StoppingCriteria

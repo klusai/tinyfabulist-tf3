@@ -3,6 +3,8 @@ import json
 import time
 import random
 import yaml
+import hashlib
+from datetime import datetime
 from pathlib import Path
 from itertools import product
 
@@ -22,12 +24,12 @@ except ImportError:
 # ============================================================
 # 1. Configuration
 # ============================================================
-MODEL_PATH = "artifacts/transformers-sft"
-OUTPUT_DIR = "artifacts/fable_batch_generation"
+MODEL_PATH = "artifacts/transformers-50m-base-sft"
+OUTPUT_DIR = "artifacts/fable_batch_f_generation"
 ENTITIES_YAML = "tf3/ds_generation/fable_entities.yaml"
-TOTAL_FABLES = 3_000_000
+TOTAL_FABLES = 100
 BATCH_SIZE = 1024              
-MAX_TOKENS = 640               
+MAX_TOKENS = 450               # ~250 words, reduced from 640 to prevent rambling
 SHARD_SIZE = 1_000            # write file every 1k fables
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -86,27 +88,29 @@ def generate_combinations(entities, total_needed):
 # ============================================================
 def create_fable_prompt(personaj, decor, provocare, deznodamant, invatatura):
     """Create a fable prompt from entity combination."""
-    template = f"""Creează o fabulă bazată pe următoarele elemente. Împletește-le natural într-o poveste:
-- Personaj principal: {personaj}
-- Decor: {decor}
-- Provocare: {provocare}
-- Deznodământ: {deznodamant}
-- Învățătură: {invatatura}
-
-Fabulă trebuie:
-- Să fie potrivită pentru grupa de vârstă B (4-7 ani)
-- Să folosească un vocabular simplu pe care copiii de 4-7 ani îl pot înțelege
-- Să folosească un limbaj concret, nu abstract
-- Să înceapă cu o descriere vie a scenei
-- Să nu folosească nume pentru personaje, ci trăsătura și tipul lor
-- Să includă dialog semnificativ, dar simplu
-- Să arate (nu să spună direct) dezvoltarea personajului
-- Să se încheie cu o legătură clară la morală
-- Să fie concisă, captivantă, aprox. 250 de cuvinte.
-
-Scrie fabula acum:
+    template = f"""Creeaza o poveste despre {personaj}.
+  - Personaj principal: {personaj}
+  - Decor: {decor}
+  - Provocare: {provocare}
+  - Deznodământ: {deznodamant}
+  - Învățătură: {invatatura}
+Fabula ar trebui:
+  - Să fie potrivită pentru grupa de vârstă B (4-7 ani)
+  - Să folosească un vocabular simplu pe care copiii de 4-7 ani îl pot înțelege
+  - Să folosească limbaj concret, nu abstract
+  - Să înceapă cu o descriere vie a decorului
+  - Să nu folosească nume pentru personaje, ci trăsătura și tipul personajului
+  - Să includă dialog semnificativ, dar simplu
+  - Să arate (nu să spună) evoluția personajului
+  - Să se încheie cu o legătură clară la morală
+  Păstrează povestea concisă, dar captivantă, în jur de 250 de cuvinte.
 """
     return template.strip()
+
+
+def compute_prompt_hash(prompt_text):
+    """Compute SHA256 hash of prompt text."""
+    return hashlib.sha256(prompt_text.encode('utf-8')).hexdigest()
 
 
 # ============================================================
@@ -117,7 +121,7 @@ def load_mlx():
     model, config = load(str(Path(MODEL_PATH).resolve()))
     tokenizer = load_tokenizer(
         Path(MODEL_PATH).resolve(),
-        eos_token_ids=[],    
+        # Don't override eos_token_ids - let it use the model's default EOS token
         tokenizer_config_extra={"trust_remote_code": True},
     )
     return model, tokenizer
@@ -133,10 +137,12 @@ def generate_batch(model, tokenizer, combinations, start_idx, batch_size):
     
     # Create unique prompts for each combination
     prompts = []
+    prompt_texts = []
     for personaj, decor, provocare, deznodamant, invatatura in batch_combinations:
         prompt_text = create_fable_prompt(personaj, decor, provocare, deznodamant, invatatura)
         prompt_ids = tokenizer.encode(prompt_text)
         prompts.append(prompt_ids)
+        prompt_texts.append(prompt_text)
 
     resp = batch_generate(
         model,
@@ -167,7 +173,8 @@ def generate_batch(model, tokenizer, combinations, start_idx, batch_size):
             # This might require decoding token IDs if available
             raise AttributeError(f"BatchResponse object doesn't have expected attributes. Available attributes: {dir(resp)}")
     
-    return outputs
+    # Return both outputs and prompt_texts
+    return outputs, prompt_texts
 
 
 # ============================================================
@@ -205,10 +212,21 @@ def run_generation():
         batch_start = time.time()
         
         # Generate batch with unique combinations
-        outputs = generate_batch(model, tokenizer, combinations, combination_idx, BATCH_SIZE)
+        outputs, prompt_texts = generate_batch(model, tokenizer, combinations, combination_idx, BATCH_SIZE)
         combination_idx += len(outputs)
         
-        shard_data.extend(outputs)
+        # Create full records with metadata
+        for fable, prompt in zip(outputs, prompt_texts):
+            record = {
+                "fable": fable,
+                "lang": "ro",
+                "prompt": prompt,
+                "prompt_hash": compute_prompt_hash(prompt),
+                "generation_timestamp": datetime.utcnow().isoformat() + "Z",
+                "llm_name": MODEL_PATH,
+                "pipeline_stage": "generation"
+            }
+            shard_data.append(record)
 
         total_written += len(outputs)
         print(f"[Batch] Generated {len(outputs)} fables in {time.time() - batch_start:.2f}s → total {total_written:,} ({combination_idx:,}/{len(combinations):,} combinations)")
@@ -217,8 +235,8 @@ def run_generation():
         if len(shard_data) >= SHARD_SIZE or total_written >= TOTAL_FABLES:
             out_path = os.path.join(OUTPUT_DIR, f"fables_shard_{shard_index:05d}.jsonl")
             with open(out_path, "w", encoding="utf-8") as f:
-                for fab in shard_data:
-                    f.write(json.dumps({"fable": fab}, ensure_ascii=False) + "\n")
+                for record in shard_data:
+                    f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
             print(f"[Shard] Saved {len(shard_data)} fables → {out_path}")
             shard_index += 1

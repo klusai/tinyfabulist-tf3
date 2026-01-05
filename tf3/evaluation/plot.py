@@ -25,6 +25,7 @@ MODEL_NAMES = {
     "tf3-50m-base-mamba-mlx": "mamba",
     "tf3-50m-base-q9-mlx": "transformers-q9",
     "tf3-50m-base-q6-mlx": "transformers-q6",
+    "transformers-sft-mlx": "transformers-distilled",
 }
 
 
@@ -431,6 +432,10 @@ def plot_metrics(metrics: Dict[str, Dict[str, float]], output_file: str = "metri
 
 
 def main():
+    print(f"Parsing log file: {LOG_FILE}")
+    with open(LOG_FILE, "r") as f:
+        for line in f:
+            print(line)
     metrics = parse_log(LOG_FILE)
     plot_metrics(metrics)
 

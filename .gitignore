@@ -8,5 +8,7 @@ wandb/
 ner_dataset/
 ner_dataset_tokenized/
 bert-ner-model/
+sft-distilled/
 .env
 mlx_cache/
+*.npy

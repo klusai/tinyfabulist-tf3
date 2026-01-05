@@ -26,7 +26,7 @@ except ImportError:
     print("MLX not available")
 
 ARTIFACTS_FOLDER = "tf3/evaluation/artifacts"
-CHECKPOINTS = ["artifacts/RoLlama2-7b-mlx"] #"tf3/artifacts/training"
+CHECKPOINTS = ["artifacts/transformers-50m-base-sft-mlx"] #"tf3/artifacts/training"
 OUTPUT_PATH = "tf3/evaluation/artifacts/evaluation.log"
 
 

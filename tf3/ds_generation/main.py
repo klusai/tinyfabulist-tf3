@@ -24,9 +24,9 @@ MODEL_PATH = "artifacts/transformers-final-sft"
 OUTPUT_DIR = "artifacts/fable_batch_generation"
 ENTITIES_YAML = "tf3/ds_generation/fable_entities.yaml"
 TOTAL_FABLES = 3_000_000
-BATCH_SIZE = 32                
+CHUNK_SIZE = 5_000             # prompts sent to batch_generate at once
 MAX_TOKENS = 512               
-SHARD_SIZE = 5_000             # write file every 5k fables (~5 min)
+SHARD_SIZE = 5_000             # write file every 5k fables
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -117,33 +117,31 @@ def load_mlx():
 
 
 # ============================================================
-# 5. Generate one batch with unique prompts
+# 5. Generate a chunk using continuous batching
 # ============================================================
-def generate_batch(model, tokenizer, combinations, start_idx, batch_size):
-    """Generate a batch of fables using unique combinations."""
-    end_idx = min(start_idx + batch_size, len(combinations))
+def generate_chunk(model, tokenizer, combinations, start_idx, chunk_size):
+    """Generate fables using MLX's continuous batching engine."""
+    end_idx = min(start_idx + chunk_size, len(combinations))
     batch_combinations = combinations[start_idx:end_idx]
-    
-    # Create unique prompts for each combination
+
     prompts = []
     for personaj, decor, provocare, deznodamant, invatatura in batch_combinations:
         prompt_text = create_fable_prompt(personaj, decor, provocare, deznodamant, invatatura)
-        prompt_ids = tokenizer.encode(prompt_text)
-        prompts.append(prompt_ids)
+        prompts.append(tokenizer.encode(prompt_text))
 
     resp = batch_generate(
         model,
         tokenizer,
         prompts=prompts,
         max_tokens=MAX_TOKENS,
-        verbose=False,
+        completion_batch_size=32,
     )
 
-    return resp.texts
+    return resp.texts, resp.stats
 
 
 # ============================================================
-# 6. Main batching loop
+# 6. Main generation loop
 # ============================================================
 def run_generation(worker_id=0, total_workers=1):
     if not MLX_AVAILABLE:
@@ -151,7 +149,6 @@ def run_generation(worker_id=0, total_workers=1):
 
     tag = f"[W{worker_id}]" if total_workers > 1 else "[Gen]"
 
-    # Load entities from YAML
     print(f"{tag} Loading entities from {ENTITIES_YAML}...")
     entities = load_entities(ENTITIES_YAML)
     print(f"{tag} Loaded entities:")
@@ -160,8 +157,7 @@ def run_generation(worker_id=0, total_workers=1):
     print(f"  - Provocări: {len(entities['provocare'])}")
     print(f"  - Deznodăminte: {len(entities['deznodamant'])}")
     print(f"  - Învățături: {len(entities['invatatura'])}")
-    
-    # Generate all combinations, then slice for this worker
+
     print(f"\n{tag} Generating {TOTAL_FABLES:,} unique combinations...")
     combinations = generate_combinations(entities, TOTAL_FABLES)
 
@@ -171,42 +167,36 @@ def run_generation(worker_id=0, total_workers=1):
     combinations = combinations[start:end]
     target = len(combinations)
     print(f"{tag} Worker {worker_id}/{total_workers}: generating fables {start:,}-{end:,} ({target:,} total)")
-    
-    # Load model
+
     model, tokenizer = load_mlx()
 
     total_written = 0
     shard_index = 0
-    shard_data = []
     combination_idx = 0
-
     overall_start = time.time()
 
     while total_written < target:
-        batch_start = time.time()
-        
-        # Generate batch with unique combinations
-        outputs = generate_batch(model, tokenizer, combinations, combination_idx, BATCH_SIZE)
+        n = min(CHUNK_SIZE, target - total_written)
+        chunk_start = time.time()
+
+        outputs, stats = generate_chunk(model, tokenizer, combinations, combination_idx, n)
         combination_idx += len(outputs)
-        
-        shard_data.extend(outputs)
-
         total_written += len(outputs)
-        print(f"{tag} {len(outputs)} fables in {time.time() - batch_start:.1f}s | {total_written:,}/{target:,}")
 
-        # Write shard
-        if len(shard_data) >= SHARD_SIZE or total_written >= target:
-            out_path = os.path.join(OUTPUT_DIR, f"fables_w{worker_id:02d}_shard_{shard_index:05d}.jsonl")
-            with open(out_path, "w", encoding="utf-8") as f:
-                for fab in shard_data:
-                    f.write(json.dumps({"fable": fab}, ensure_ascii=False) + "\n")
+        elapsed = time.time() - chunk_start
+        fps = len(outputs) / elapsed
+        eta_h = (target - total_written) / fps / 3600 if fps > 0 else 0
+        print(f"{tag} {len(outputs):,} fables in {elapsed:.1f}s ({fps:.1f}/s, {stats.generation_tps:.0f} tok/s) | {total_written:,}/{target:,} | ETA {eta_h:.1f}h")
 
-            print(f"{tag} Saved {len(shard_data)} fables -> {out_path}")
-            shard_index += 1
-            shard_data = []
+        out_path = os.path.join(OUTPUT_DIR, f"fables_w{worker_id:02d}_shard_{shard_index:05d}.jsonl")
+        with open(out_path, "w", encoding="utf-8") as f:
+            for fab in outputs:
+                f.write(json.dumps({"fable": fab}, ensure_ascii=False) + "\n")
+        print(f"{tag} Saved {len(outputs)} fables -> {out_path}")
+        shard_index += 1
 
     total_time = time.time() - overall_start
-    print(f"\n{tag} Done! {total_written:,} fables in {total_time/60:.1f} min")
+    print(f"\n{tag} Done! {total_written:,} fables in {total_time/3600:.1f}h ({total_written/total_time:.1f}/s)")
 
 
 if __name__ == "__main__":

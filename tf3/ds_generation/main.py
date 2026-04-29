@@ -139,8 +139,7 @@ def generate_batch(model, tokenizer, combinations, start_idx, batch_size):
         verbose=False,
     )
 
-    outputs = [o["generated_text"] for o in resp.generations]
-    return outputs
+    return resp.texts
 
 
 # ============================================================

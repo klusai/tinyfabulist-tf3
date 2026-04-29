@@ -26,7 +26,7 @@ ENTITIES_YAML = "tf3/ds_generation/fable_entities.yaml"
 TOTAL_FABLES = 3_000_000
 BATCH_SIZE = 512               
 MAX_TOKENS = 512               
-SHARD_SIZE = 50_000            # write file every 50k fables
+SHARD_SIZE = 5_000             # write file every 5k fables (~5 min)
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 

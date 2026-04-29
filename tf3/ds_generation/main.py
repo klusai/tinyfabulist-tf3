@@ -145,23 +145,32 @@ def generate_batch(model, tokenizer, combinations, start_idx, batch_size):
 # ============================================================
 # 6. Main batching loop
 # ============================================================
-def run_generation():
+def run_generation(worker_id=0, total_workers=1):
     if not MLX_AVAILABLE:
         raise RuntimeError("MLX not installed. Run: pip install mlx-lm")
 
+    tag = f"[W{worker_id}]" if total_workers > 1 else "[Gen]"
+
     # Load entities from YAML
-    print(f"[Config] Loading entities from {ENTITIES_YAML}...")
+    print(f"{tag} Loading entities from {ENTITIES_YAML}...")
     entities = load_entities(ENTITIES_YAML)
-    print(f"[Config] Loaded entities:")
+    print(f"{tag} Loaded entities:")
     print(f"  - Personaje: {len(entities['personaj_principal'])}")
     print(f"  - Decoruri: {len(entities['decor'])}")
     print(f"  - Provocări: {len(entities['provocare'])}")
     print(f"  - Deznodăminte: {len(entities['deznodamant'])}")
     print(f"  - Învățături: {len(entities['invatatura'])}")
     
-    # Generate all combinations
-    print(f"\n[Config] Generating {TOTAL_FABLES:,} unique combinations...")
+    # Generate all combinations, then slice for this worker
+    print(f"\n{tag} Generating {TOTAL_FABLES:,} unique combinations...")
     combinations = generate_combinations(entities, TOTAL_FABLES)
+
+    chunk_size = len(combinations) // total_workers
+    start = worker_id * chunk_size
+    end = start + chunk_size if worker_id < total_workers - 1 else len(combinations)
+    combinations = combinations[start:end]
+    target = len(combinations)
+    print(f"{tag} Worker {worker_id}/{total_workers}: generating fables {start:,}-{end:,} ({target:,} total)")
     
     # Load model
     model, tokenizer = load_mlx()
@@ -173,7 +182,7 @@ def run_generation():
 
     overall_start = time.time()
 
-    while total_written < TOTAL_FABLES:
+    while total_written < target:
         batch_start = time.time()
         
         # Generate batch with unique combinations
@@ -183,23 +192,27 @@ def run_generation():
         shard_data.extend(outputs)
 
         total_written += len(outputs)
-        print(f"[Batch] Generated {len(outputs)} fables in {time.time() - batch_start:.2f}s → total {total_written:,} ({combination_idx:,}/{len(combinations):,} combinations)")
+        print(f"{tag} {len(outputs)} fables in {time.time() - batch_start:.1f}s | {total_written:,}/{target:,}")
 
         # Write shard
-        if len(shard_data) >= SHARD_SIZE or total_written >= TOTAL_FABLES:
-            out_path = os.path.join(OUTPUT_DIR, f"fables_shard_{shard_index:05d}.jsonl")
+        if len(shard_data) >= SHARD_SIZE or total_written >= target:
+            out_path = os.path.join(OUTPUT_DIR, f"fables_w{worker_id:02d}_shard_{shard_index:05d}.jsonl")
             with open(out_path, "w", encoding="utf-8") as f:
                 for fab in shard_data:
                     f.write(json.dumps({"fable": fab}, ensure_ascii=False) + "\n")
 
-            print(f"[Shard] Saved {len(shard_data)} fables → {out_path}")
+            print(f"{tag} Saved {len(shard_data)} fables -> {out_path}")
             shard_index += 1
             shard_data = []
 
     total_time = time.time() - overall_start
-    print(f"\n[Done] Generated {total_written:,} fables in {total_time/60:.1f} minutes")
-    print(f"[Done] Used {combination_idx:,} unique combinations")
+    print(f"\n{tag} Done! {total_written:,} fables in {total_time/60:.1f} min")
 
 
 if __name__ == "__main__":
-    run_generation()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--worker-id", type=int, default=0)
+    parser.add_argument("--total-workers", type=int, default=1)
+    args = parser.parse_args()
+    run_generation(worker_id=args.worker_id, total_workers=args.total_workers)

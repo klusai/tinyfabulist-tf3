@@ -8,12 +8,12 @@ ALIGNED_VOCAB_SIZE = VOCAB_SIZE + (64 - VOCAB_SIZE % 64) if VOCAB_SIZE % 64 != 0
 student_config = LlamaConfig(
     vocab_size=ALIGNED_VOCAB_SIZE,  # Aligned to 64 for kernel fusion
 
-    # Core architecture - optimized for GPU speed
-    # Using 512 hidden_size matches LLaMA optimized kernels better than 384
-    hidden_size=512,           # Matches teacher - better kernel utilization
-    num_attention_heads=8,     # 512/8 = 64 → FlashAttention2-compatible, better than 6 heads
-    intermediate_size=1380,    # Matches LLaMA optimized shapes
-    num_key_value_heads=8,     # Full attention (GQA overhead > benefit at small head counts)
+    # Compact student architecture derived from pruning analysis
+    # 25% reduction in width, heads, and MLP relative to the 51.65M teacher
+    hidden_size=384,
+    num_attention_heads=6,     # 384/6 = 64 head dim
+    intermediate_size=1024,
+    num_key_value_heads=6,
 
     num_hidden_layers=6,       # Keep teacher depth (best for quality)
     max_position_embeddings=2048,

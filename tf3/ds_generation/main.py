@@ -24,7 +24,7 @@ MODEL_PATH = "artifacts/transformers-final-sft"
 OUTPUT_DIR = "artifacts/fable_batch_generation"
 ENTITIES_YAML = "tf3/ds_generation/fable_entities.yaml"
 TOTAL_FABLES = 3_000_000
-BATCH_SIZE = 128               
+BATCH_SIZE = 512               
 MAX_TOKENS = 512               
 SHARD_SIZE = 50_000            # write file every 50k fables
 

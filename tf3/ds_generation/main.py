@@ -11,9 +11,7 @@ from itertools import product
 # ============================================================
 MLX_AVAILABLE = True
 try:
-    from mlx_lm import load
-    from mlx_lm.tokenizer_utils import load_tokenizer
-    from mlx_lm.generate import batch_generate
+    from mlx_lm import load, batch_generate
     import mlx.core as mx
 except ImportError:
     MLX_AVAILABLE = False
@@ -114,12 +112,7 @@ Scrie fabula acum:
 # ============================================================
 def load_mlx():
     print(f"[MLX] Loading model from {MODEL_PATH}")
-    model, config = load(str(Path(MODEL_PATH).resolve()))
-    tokenizer = load_tokenizer(
-        Path(MODEL_PATH).resolve(),
-        eos_token_ids=[],    
-        tokenizer_config_extra={"trust_remote_code": True},
-    )
+    model, tokenizer = load(str(Path(MODEL_PATH).resolve()))
     return model, tokenizer
 
 
